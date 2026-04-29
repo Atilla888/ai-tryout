@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SARA – Spaces</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f0f2f5; min-height: 100vh; }
+
+    /* NAVBAR */
+    .sara-nav {
+      background: #fff;
+      border-bottom: 3px solid #f5c030;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .sara-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 32px;
+      text-decoration: none;
+    }
+
+    /* Logo: 3 gelbe + 1 schwarzes Quadrat (unten rechts) — exakt wie Screenshot */
+    .hof-logo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 2px;
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .hof-logo span { display: block; border-radius: 1px; }
+    .sq-tl { background: #f5c030; }
+    .sq-tr { background: #f5c030; }
+    .sq-bl { background: #f5c030; }
+    .sq-br { background: #1a1a1a; }
+
+    .sara-brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+    .sara-brand-name { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+    .sara-brand-sub  { font-size: 10px; color: #888; }
+
+    .sara-nav-links { display: flex; height: 64px; flex: 1; align-items: stretch; }
+    .sara-nav-link {
+      display: flex; align-items: center; padding: 0 16px;
+      font-size: 14px; color: #555; cursor: pointer; text-decoration: none;
+      border-bottom: 3px solid transparent; margin-bottom: -3px;
+      white-space: nowrap; transition: color .15s;
+    }
+    .sara-nav-link:hover { color: #1a1a1a; }
+    .sara-nav-link.active { color: #1a1a1a; border-bottom: 3px solid #f5c030; font-weight: 600; }
+
+    .sara-nav-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+    .sara-username  { font-size: 14px; color: #333; }
+    .sara-logout {
+      border: 1px solid #ccc; background: #fff; border-radius: 6px;
+      padding: 6px 16px; font-size: 14px; cursor: pointer; color: #333;
+    }
+    .sara-logout:hover { background: #f5f5f5; }
+
+    /* PAGE */
+    .sara-content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .sara-section-card { background: #fff; border-radius: 10px; border: 1px solid #e8e8e8; overflow: hidden; }
+    .sara-section-header { padding: 16px 24px 12px; display: flex; align-items: center; gap: 8px; }
+    .sara-section-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+
+    /* SEARCH + CHIPS */
+    .search-filter-bar { padding: 0 24px 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .sara-search {
+      flex: 1; max-width: 340px; padding: 8px 14px;
+      border: 1px solid #ddd; border-radius: 20px; font-size: 13px;
+      color: #333; background: #fafafa; outline: none;
+    }
+    .sara-search:focus { border-color: #f5c030; background: #fff; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      padding: 5px 16px; border-radius: 20px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555;
+      transition: all .15s; user-select: none;
+    }
+    .chip:hover { border-color: #aaa; color: #333; }
+    .chip.on { background: #f5c030; border-color: #f5c030; color: #412402; font-weight: 600; }
+
+    /* GRID */
+    .count-label { font-size: 12px; color: #aaa; padding: 0 24px 12px; }
+    .spaces-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 0 24px 24px; }
+
+    .space-card {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      padding: 18px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+      display: flex; flex-direction: column;
+    }
+    .space-card:hover { border-color: #f5c030; box-shadow: 0 2px 10px rgba(245,192,48,.2); }
+
+    .sc-name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; line-height: 1.3; }
+    .sc-desc { font-size: 12px; color: #777; line-height: 1.6; margin-bottom: 14px; flex: 1; }
+    .sc-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+
+    .pill { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; }
+    .pill-audio { background: #22a06b; }
+    .pill-video { background: #7c3aed; }
+    .pill-3d    { background: #db2777; }
+    .pill-image { background: #dc2626; }
+    .pill-text  { background: #2563eb; }
+
+    .sc-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 12px; border-top: 1px solid #f0f0f0; margin-top: auto;
+    }
+    .sc-meta { font-size: 11px; color: #bbb; line-height: 1.4; }
+    .btn-open {
+      background: #fff; border: 1px solid #ccc; border-radius: 6px;
+      padding: 6px 20px; font-size: 13px; font-weight: 500; color: #333;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-open:hover { background: #f5c030; border-color: #f5c030; color: #412402; }
+
+    /* EMPTY */
+    .empty-state { grid-column: 1/-1; text-align: center; padding: 3rem; color: #bbb; }
+    .empty-state p { font-size: 14px; margin-bottom: 12px; }
+    .btn-reset {
+      background: #f5c030; border: none; border-radius: 6px;
+      padding: 7px 20px; font-size: 13px; font-weight: 600; color: #412402; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="sara-nav">
+  <a class="sara-brand" href="index.html">
+    <div class="hof-logo">
+      <span class="sq-tl"></span>
+      <span class="sq-tr"></span>
+      <span class="sq-bl"></span>
+      <span class="sq-br"></span>
+    </div>
+    <div class="sara-brand-text">
+      <span class="sara-brand-name">SARA</span>
+      <span class="sara-brand-sub">System for AI-Research &amp; Assessment</span>
+    </div>
+  </a>
+
+  <div class="sara-nav-links">
+    <a class="sara-nav-link" href="#">Projects</a>
+    <a class="sara-nav-link" href="#">Datasets</a>
+    <a class="sara-nav-link" href="#">Models</a>
+    <a class="sara-nav-link" href="#">Leaderboards</a>
+    <a class="sara-nav-link" href="#">Evaluations</a>
+    <a class="sara-nav-link active" href="index.html">Spaces</a>
+    <a class="sara-nav-link" href="#">Groups</a>
+  </div>
+
+  <div class="sara-nav-right">
+    <span class="sara-username" id="navUser"></span>
+    <button class="sara-logout" id="authBtn" onclick="handleAuth()">Sign in</button>
+  </div>
+</nav>
+
+<div class="sara-content">
+  <div class="sara-section-card">
+    <div class="sara-section-header">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#555" stroke-width="1.5">
+        <rect x="1" y="1" width="6" height="6" rx="1"/>
+        <rect x="9" y="1" width="6" height="6" rx="1"/>
+        <rect x="1" y="9" width="6" height="6" rx="1"/>
+        <rect x="9" y="9" width="6" height="6" rx="1"/>
+      </svg>
+      <span class="sara-section-title">Spaces</span>
+    </div>
+
+    <div class="search-filter-bar">
+      <input class="sara-search" id="searchInp" type="text" placeholder="Search spaces..." oninput="render()">
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="count-label" id="countLabel"></div>
+    <div class="spaces-grid" id="grid"></div>
+  </div>
+</div>
+
+<script>
+const SPACES = [
+  { id:1, name:"AceStep 1.5 – Music Generator",  desc:"Generate music from a text prompt and style parameters. Output is a downloadable audio file.", task:"Audio", input:"Text",  output:"Audio", date:"27.4.2026", queue:2 },
+  { id:2, name:"LTX 2.3 – Video Generator",       desc:"Generate short videos from text prompts using LTX 2.3. Custom duration and resolution supported.", task:"Video", input:"Text",  output:"Video", date:"27.4.2026", queue:0 },
+  { id:3, name:"SAM 3D – Object Generator",        desc:"Create interactive 3D models from images using SAM. Output is a GLB file previewable in-browser.", task:"3D",   input:"Image", output:"3D",    date:"27.4.2026", queue:1 },
+  { id:4, name:"YOLO v11 – Object Detection",      desc:"Detect and classify objects in images. Returns annotated image with bounding boxes and scores.",    task:"Image", input:"Image", output:"Image", date:"27.4.2026", queue:0 },
+  { id:5, name:"Text Summarizer",                  desc:"Summarise long documents into concise bullet-point summaries. Supports plain text and markdown.",    task:"Text",  input:"Text",  output:"Text",  date:"27.4.2026", queue:0 },
+];
+
+const PILL = { Audio:"pill-audio", Video:"pill-video", "3D":"pill-3d", Image:"pill-image", Text:"pill-text" };
+const FILTERS = ["All","Audio","Video","3D","Image","Text"];
+let activeFilter = "All";
+
+const chipsEl = document.getElementById("chips");
+FILTERS.forEach(f => {
+  const c = document.createElement("span");
+  c.className = "chip" + (f === "All" ? " on" : "");
+  c.textContent = f;
+  c.addEventListener("click", () => {
+    activeFilter = f;
+    document.querySelectorAll(".chip").forEach((el, i) => el.className = "chip" + (FILTERS[i] === f ? " on" : ""));
+    render();
+  });
+  chipsEl.appendChild(c);
+});
+
+function render() {
+  const q = document.getElementById("searchInp").value.toLowerCase();
+  const filtered = SPACES.filter(s =>
+    (activeFilter === "All" || s.task === activeFilter) &&
+    (!q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.task.toLowerCase().includes(q))
+  );
+  document.getElementById("countLabel").textContent = filtered.length + " space" + (filtered.length !== 1 ? "s" : "") + " available";
+  const grid = document.getElementById("grid");
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state"><p>No spaces match your search.</p><button class="btn-reset" onclick="resetFilters()">Clear filters</button></div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(s => `
+    <div class="space-card" onclick="window.location.href='space-detail.html?id=${s.id}'">
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-desc">${s.desc}</div>
+      <div class="sc-badges">
+        <span class="pill ${PILL[s.task]}">${s.task}</span>
+        <span class="pill ${PILL[s.input]}">${s.input} in</span>
+        <span class="pill ${PILL[s.output]}">${s.output} out</span>
+      </div>
+      <div class="sc-footer">
+        <span class="sc-meta">${s.date} · ${s.queue > 0 ? s.queue + " in queue" : "Available"}</span>
+        <button class="btn-open" onclick="event.stopPropagation(); window.location.href='space-detail.html?id=${s.id}'">Open</button>
+      </div>
+    </div>`).join("");
+}
+
+function resetFilters() {
+  activeFilter = "All";
+  document.getElementById("searchInp").value = "";
+  document.querySelectorAll(".chip").forEach((el, i) => el.className = "chip" + (i === 0 ? " on" : ""));
+  render();
+}
+
+function handleAuth() {
+  if (localStorage.getItem("jwt_token")) {
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("username");
+    location.reload();
+  } else {
+    window.location.href = "signin.html";
+  }
+}
+
+const token = localStorage.getItem("jwt_token");
+const username = localStorage.getItem("username");
+if (token && username) {
+  document.getElementById("navUser").textContent = username;
+  document.getElementById("authBtn").textContent = "Logout";
+}
+
+render();
+</script>
+</body>
+</html>
