@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aispacesuser
+      POSTGRES_PASSWORD: aispacespass
+      POSTGRES_DB: aispaces
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: localhost/ai-spaces-tryout_backend:latest
+    build:
+      context: ./apps/backend-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/backend-api:/app
+      - storage_data:/app/storage
+
+volumes:
+  postgres_data:
+  storage_data:
