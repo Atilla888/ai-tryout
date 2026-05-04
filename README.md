@@ -1,93 +1,185 @@
-# AI-spaces
+# AI-Spaces-Tryout
 
+> A Hof University platform where users can browse AI spaces, submit input through browser UIs, run AI model containers on demand in Kubernetes, track progress, preview results, and download generated files.
 
+Inspired by [Hugging Face Spaces](https://huggingface.co/spaces), this platform is scoped and adapted for Hof University infrastructure.
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## What It Does
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+1. A user opens the platform and sees available AI spaces (model cards).
+2. The user selects a space and fills in an input form rendered from configuration.
+3. The platform creates an asynchronous job and shows queue position.
+4. The orchestrator picks the job and starts a model container in Kubernetes.
+5. The model reports progress back to the backend.
+6. On completion the user previews the result in the browser, downloads the output, and receives a browser notification.
+7. The user can revisit their private job history for up to 14 days.
 
-## Add your files
+---
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Repository Layout
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.hof-university.de/atilla888/ai-spaces.git
-git branch -M main
-git push -uf origin main
+.
+├── apps/
+│   ├── frontend/           # React + TypeScript + Vite SPA
+│   ├── backend-api/        # FastAPI REST backend
+│   └── orchestrator/       # Job orchestrator service (Kubernetes-aware)
+├── models/
+│   ├── common-runner-template/   # Reference model runner contract & template
+│   ├── object-detection-space/   # YOLO-based object detection model runner
+│   ├── audio-space/              # Audio model runner (speech-to-text / TTS)
+│   └── video-or-3d-space/        # Video / 3D generation model runner
+├── infra/
+│   ├── docker/             # Shared Dockerfile snippets / base images
+│   ├── k8s/                # Kubernetes manifests (Jobs, Deployments, Services)
+│   └── scripts/            # Helper scripts (seed data, cleanup, deploy)
+├── tests/
+│   └── e2e/                # End-to-end tests (Playwright or similar)
+├── docs/                   # Project documentation
+├── .env.example            # All required environment variables (no secrets)
+├── .gitlab-ci.yml          # CI pipeline (lint)
+└── docker-compose.yml      # Local development stack
 ```
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://gitlab.hof-university.de/atilla888/ai-spaces/-/settings/integrations)
+## Quick Start (Local Development)
 
-## Collaborate with your team
+### Prerequisites
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+| Tool | Minimum Version |
+|------|----------------|
+| Docker + Docker Compose **or** Podman + podman-compose | Docker 24+ / Podman 3.4+ |
+| Node.js | 20 LTS |
+| Python | 3.11+ |
+| Git | any recent |
 
-## Test and Deploy
+> **Note:** On Hof University laptops use `podman-compose` in place of `docker compose`.
 
-Use the built-in continuous integration in GitLab.
+### 1. Clone the repository
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```bash
+git clone https://gitlab.hof-university.de/atilla888/ai-spaces.git
+cd ai-spaces
+```
 
-***
+### 2. Configure environment variables
 
-# Editing this README
+```bash
+cp .env.example .env
+# Edit .env only if you need non-default ports or credentials
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+**Never commit the `.env` file.** It is listed in `.gitignore`.
 
-## Suggestions for a good README
+### 3. Start the full stack
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```bash
+docker compose up --build
+# or
+podman-compose up --build
+```
 
-## Name
-Choose a self-explaining name for your project.
+| Service | URL |
+|---------|-----|
+| Frontend (dev server) | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| Backend Swagger docs | http://localhost:8000/docs |
+| PostgreSQL | localhost:5432 |
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### 4. Run the backend in isolation (no Docker)
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```bash
+cd apps/backend-api
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### 5. Run the frontend in isolation (no Docker)
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```bash
+cd apps/frontend
+npm install
+npm run dev
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+---
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## Running Tests
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Backend unit tests
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```bash
+cd apps/backend-api
+pytest tests/unit/
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### Backend integration tests
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```bash
+pytest tests/integration/
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### End-to-end tests
 
-## License
-For open source projects, say how it is licensed.
+```bash
+cd tests/e2e
+npm install
+npx playwright test
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Lint
+
+```bash
+# Python
+cd apps/backend-api && ruff check .
+
+# TypeScript / Frontend
+cd apps/frontend && npm run lint
+```
+
+---
+
+## Architecture
+
+**High-level flow:**
+
+```
+Browser → Backend API → PostgreSQL (job queue)
+                      ↓
+              Orchestrator Service
+                      ↓
+             Kubernetes Cluster
+                      ↓
+           Model Runner Container
+                      ↓
+       Backend API + Persistent Storage
+```
+
+---
+
+## Environment Variables
+
+All variables are documented in [`.env.example`](.env.example). Required variables:
+
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_USER` | Database user |
+| `POSTGRES_PASSWORD` | Database password (use a strong value in production) |
+| `POSTGRES_DB` | Database name |
+| `DATABASE_URL` | Full SQLAlchemy async connection string |
+| `SECRET_KEY` | Backend secret key for token signing |
+| `STORAGE_PATH` | Filesystem path where artifacts are persisted |
+| `VITE_API_BASE_URL` | Backend API base URL used by the frontend |
+
+
+---
+
+## Team
+
+Hof University of Applied Sciences — Interdisciplinary Software Development Project  
+Course topic: Hugging Face Spaces for Hof University / AI-Spaces-Tryout
