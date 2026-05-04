@@ -79,21 +79,12 @@
     .panel, .sidebar-card { background: #fff; border: 1px solid #e6e7eb; border-radius: 20px; padding: 24px; }
     .panel h2 { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; color: #555; margin-bottom: 18px; }
     .form-row { margin-bottom: 18px; }
-    .form-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #333; }
-    .required-indicator { color: #dc2626; }
-    .form-description { font-size: 12px; color: #6e7280; margin-bottom: 8px; }
-    .form-row input[type=text], .form-row input[type=number], .form-row textarea, .form-row select { width: 100%; border: 1px solid #d8d8d8; border-radius: 14px; padding: 12px 16px; font-size: 14px; color: #222; background: #fafafa; }
-    .form-row input:focus, .form-row textarea:focus, .form-row select:focus { outline: none; border-color: #f5c030; background: #fff; }
-    .form-row textarea { min-height: 120px; resize: vertical; font-family: inherit; }
-    .drop-zone { border: 2px dashed #dcdcdc; border-radius: 16px; padding: 32px; text-align: center; color: #666; background: #fcfcfc; cursor: pointer; transition: border-color .15s, background .15s; }
-    .drop-zone:hover { border-color: #f5c030; background: #fffbf0; }
-    .drop-zone.dragover { border-color: #f5c030; background: #fffbf0; }
+    .form-row label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #333; }
+    .form-row input[type=text], .form-row textarea { width: 100%; border: 1px solid #d8d8d8; border-radius: 14px; padding: 14px 16px; font-size: 14px; color: #222; background: #fafafa; }
+    .form-row textarea { min-height: 120px; resize: vertical; }
+    .drop-zone { border: 2px dashed #dcdcdc; border-radius: 16px; padding: 32px; text-align: center; color: #666; background: #fcfcfc; }
     .drop-zone strong { display: block; margin-bottom: 10px; color: #333; }
-    .drop-zone input[type=file] { display: none; }
     .drop-note { font-size: 12px; color: #999; margin-top: 8px; }
-    .input-error { border-color: #dc2626 !important; background: #fef2f2 !important; }
-    .error-message { font-size: 12px; color: #dc2626; margin-top: 6px; display: none; }
-    .error-message.show { display: block; }
     .slider-label { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 10px; }
     .input-slider { width: 100%; }
     .button-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
@@ -176,11 +167,29 @@
 
   <div class="page-grid">
     <div class="panel">
-      <h2>Inputs</h2>
-      <form id="inputForm"></form>
+      <h2>Inputs (dynamically generated)</h2>
+      <div class="form-row">
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" placeholder="Enter a text prompt for the model..."></textarea>
+      </div>
+      <div class="form-row">
+        <label>Reference image</label>
+        <div class="drop-zone">
+          <strong>Drop file or click to upload</strong>
+          <span class="drop-note">Accepted: .png, .jpg · Max 10 MB</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="preset">Style preset</label>
+        <input type="text" id="preset" placeholder="Select option" />
+      </div>
+      <div class="form-row">
+        <div class="slider-label"><span>Strength</span><span>50%</span></div>
+        <input class="input-slider" type="range" min="0" max="100" value="50" />
+      </div>
       <div class="button-row">
-        <button class="btn-secondary" onclick="handleCancel()">Cancel</button>
-        <button class="btn-primary" id="submitBtn">Submit</button>
+        <button class="btn-secondary">Cancel</button>
+        <button class="btn-primary">Submit</button>
       </div>
     </div>
 
@@ -216,308 +225,28 @@
 </div>
 
 <script>
-let currentSpace = null;
-let formData = {};
+const SPACES = [
+  { id: '1', name: 'AceStep 1.5 – Music Generator', owner: 'jann.hopster', task: 'Audio', input: 'Text', output: 'Audio', desc: 'Generate music from a text prompt and style parameters.', about: 'Use this music generator to create audio clips from natural-language prompts. The output is delivered as a downloadable track.' },
+  { id: '2', name: 'LTX 2.3 – Video Generator', owner: 'atilla.kenebay', task: 'Video', input: 'Text', output: 'Video', desc: 'Generate short videos from text prompts using LTX 2.3.', about: 'This video space transforms prompts into animated video clips. Preview and download the rendered output after the job completes.' },
+  { id: '3', name: 'SAM 3D – Object Generator', owner: 'sarah.santos', task: '3D', input: 'Image', output: '3D', desc: 'Create interactive 3D models from images using SAM.', about: 'Generate GLB model output that can be previewed in-browser or downloaded for use in 3D tools.' }
+];
 
 function getQueryParam(name) {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get(name);
 }
 
-async function loadSpaceDetail() {
-  const spaceId = getQueryParam('id');
-  if (!spaceId) {
-    window.location.href = 'spaces.html';
-    return;
-  }
-
-  try {
-    const response = await fetch(`/spaces/${spaceId}`);
-    if (!response.ok) throw new Error(`Failed to fetch space detail: ${response.status}`);
-    currentSpace = await response.json();
-    renderSpaceHeader();
-    renderForm();
-  } catch (error) {
-    console.error('Error loading space:', error);
-    alert('Failed to load space details');
-  }
-}
-
-function renderSpaceHeader() {
-  const space = currentSpace;
+function renderSpace() {
+  const id = getQueryParam('id') || '1';
+  const space = SPACES.find(s => s.id === id) || SPACES[0];
   document.getElementById('spaceName').textContent = space.name;
   document.getElementById('breadcrumbName').textContent = space.name;
-  document.getElementById('spaceMeta').textContent = `${space.owner || 'Unknown'} · ${space.task.toLowerCase()} generation`;
-  document.getElementById('spaceDesc').textContent = space.description || '';
+  document.getElementById('spaceMeta').textContent = `${space.owner} · ${space.task.toLowerCase()} generation`;
+  document.getElementById('spaceDesc').textContent = space.desc;
   document.getElementById('spaceTask').textContent = space.task;
-  document.getElementById('spaceInput').textContent = space.input_type + ' in';
-  document.getElementById('spaceOutput').textContent = space.output_type + ' out';
-  document.getElementById('aboutSpace').textContent = space.about || space.description || '';
-}
-
-function renderForm() {
-  const form = document.getElementById('inputForm');
-  form.innerHTML = '';
-  formData = {};
-
-  const inputs = currentSpace.ui_config?.inputs || [];
-  if (inputs.length === 0) {
-    form.innerHTML = '<p style="color: #999; font-size: 13px;">No input fields configured.</p>';
-    return;
-  }
-
-  inputs.forEach(input => {
-    const fieldId = input.name;
-    formData[fieldId] = null;
-    const fieldWrapper = createFormField(input);
-    form.appendChild(fieldWrapper);
-  });
-}
-
-function createFormField(input) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'form-row';
-  wrapper.id = `field-${input.name}`;
-
-  const label = document.createElement('label');
-  label.htmlFor = input.name;
-  label.innerHTML = input.label + (input.required ? '<span class="required-indicator">*</span>' : '');
-
-  const description = document.createElement('div');
-  description.className = 'form-description';
-  description.textContent = input.description || '';
-
-  const errorMsg = document.createElement('div');
-  errorMsg.className = 'error-message';
-  errorMsg.id = `error-${input.name}`;
-
-  wrapper.appendChild(label);
-  if (input.description) wrapper.appendChild(description);
-
-  let control;
-
-  switch (input.type) {
-    case 'text':
-      control = document.createElement('input');
-      control.type = 'text';
-      control.id = input.name;
-      control.placeholder = input.placeholder || '';
-      if (input.maxLength) control.maxLength = input.maxLength;
-      control.addEventListener('input', (e) => {
-        formData[input.name] = e.target.value;
-        clearError(input.name);
-      });
-      break;
-
-    case 'textarea':
-      control = document.createElement('textarea');
-      control.id = input.name;
-      control.placeholder = input.placeholder || '';
-      if (input.maxLength) control.maxLength = input.maxLength;
-      control.addEventListener('input', (e) => {
-        formData[input.name] = e.target.value;
-        clearError(input.name);
-      });
-      break;
-
-    case 'number':
-      control = document.createElement('input');
-      control.type = 'number';
-      control.id = input.name;
-      control.placeholder = input.placeholder || '';
-      if (input.min !== undefined) control.min = input.min;
-      if (input.max !== undefined) control.max = input.max;
-      control.addEventListener('input', (e) => {
-        formData[input.name] = e.target.value ? parseFloat(e.target.value) : null;
-        clearError(input.name);
-      });
-      break;
-
-    case 'select':
-      control = document.createElement('select');
-      control.id = input.name;
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.textContent = input.placeholder || 'Select an option';
-      control.appendChild(placeholder);
-      (input.options || []).forEach(opt => {
-        const option = document.createElement('option');
-        option.value = opt.value;
-        option.textContent = opt.label;
-        control.appendChild(option);
-      });
-      control.addEventListener('change', (e) => {
-        formData[input.name] = e.target.value;
-        clearError(input.name);
-      });
-      break;
-
-    case 'image_upload':
-      control = createFileUpload(input, 'image/*', ['image/jpeg', 'image/png', 'image/webp']);
-      break;
-
-    case 'audio_upload':
-      control = createFileUpload(input, 'audio/*', ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm']);
-      break;
-
-    default:
-      console.warn(`Unsupported input type: ${input.type}. Rendering fallback text input.`);
-      control = document.createElement('input');
-      control.type = 'text';
-      control.id = input.name;
-      control.placeholder = input.placeholder || '';
-      control.addEventListener('input', (e) => {
-        formData[input.name] = e.target.value;
-        clearError(input.name);
-      });
-  }
-
-  wrapper.appendChild(control);
-  wrapper.appendChild(errorMsg);
-  return wrapper;
-}
-
-function createFileUpload(input, accept, allowedMimes) {
-  const container = document.createElement('div');
-  container.className = 'drop-zone';
-  container.id = input.name;
-
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = accept;
-  fileInput.id = `file-${input.name}`;
-
-  const dropLabel = document.createElement('strong');
-  dropLabel.textContent = 'Drop file or click to upload';
-
-  const note = document.createElement('span');
-  note.className = 'drop-note';
-  note.textContent = `Accepted: ${input.mime_types?.join(', ') || accept} · Max ${input.max_size_mb || 10} MB`;
-
-  container.appendChild(fileInput);
-  container.appendChild(dropLabel);
-  container.appendChild(note);
-
-  const handleFile = (file) => {
-    if (file) {
-      if (!allowedMimes.includes(file.type)) {
-        showError(input.name, `Invalid file type. Accepted: ${input.mime_types?.join(', ') || accept}`);
-        formData[input.name] = null;
-      } else if (file.size > (input.max_size_mb || 10) * 1024 * 1024) {
-        showError(input.name, `File too large. Max ${input.max_size_mb || 10} MB`);
-        formData[input.name] = null;
-      } else {
-        formData[input.name] = file;
-        clearError(input.name);
-        dropLabel.textContent = file.name;
-      }
-    }
-  };
-
-  fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-
-  container.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    container.classList.add('dragover');
-  });
-
-  container.addEventListener('dragleave', () => {
-    container.classList.remove('dragover');
-  });
-
-  container.addEventListener('drop', (e) => {
-    e.preventDefault();
-    container.classList.remove('dragover');
-    handleFile(e.dataTransfer.files[0]);
-  });
-
-  container.addEventListener('click', () => fileInput.click());
-
-  return container;
-}
-
-function clearError(fieldName) {
-  const errorEl = document.getElementById(`error-${fieldName}`);
-  if (errorEl) errorEl.classList.remove('show');
-  const fieldEl = document.getElementById(fieldName) || document.getElementById(`field-${fieldName}`);
-  if (fieldEl) fieldEl.classList.remove('input-error');
-}
-
-function showError(fieldName, message) {
-  const errorEl = document.getElementById(`error-${fieldName}`);
-  if (errorEl) {
-    errorEl.textContent = message;
-    errorEl.classList.add('show');
-  }
-  const fieldEl = document.getElementById(fieldName) || document.getElementById(`field-${fieldName}`);
-  if (fieldEl) fieldEl.classList.add('input-error');
-}
-
-function validateForm() {
-  let isValid = true;
-  const inputs = currentSpace.ui_config?.inputs || [];
-
-  inputs.forEach(input => {
-    const value = formData[input.name];
-    clearError(input.name);
-
-    if (input.required && !value) {
-      showError(input.name, `${input.label} is required`);
-      isValid = false;
-    }
-
-    if (value && input.type === 'text' && input.maxLength && value.length > input.maxLength) {
-      showError(input.name, `Max ${input.maxLength} characters`);
-      isValid = false;
-    }
-
-    if (value && input.type === 'number') {
-      const num = parseFloat(value);
-      if (input.min !== undefined && num < input.min) {
-        showError(input.name, `Minimum value is ${input.min}`);
-        isValid = false;
-      }
-      if (input.max !== undefined && num > input.max) {
-        showError(input.name, `Maximum value is ${input.max}`);
-        isValid = false;
-      }
-    }
-  });
-
-  return isValid;
-}
-
-async function handleSubmit() {
-  if (!validateForm()) return;
-
-  const formPayload = new FormData();
-  const inputs = currentSpace.ui_config?.inputs || [];
-
-  inputs.forEach(input => {
-    const value = formData[input.name];
-    if (value instanceof File) {
-      formPayload.append(input.name, value);
-    } else if (value !== null && value !== undefined) {
-      formPayload.append(input.name, value);
-    }
-  });
-
-  try {
-    const response = await fetch(`/spaces/${currentSpace.id}/jobs`, {
-      method: 'POST',
-      body: formPayload
-    });
-    if (!response.ok) throw new Error(`Failed to submit job: ${response.status}`);
-    const result = await response.json();
-    window.location.href = `/jobs/${result.id}`;
-  } catch (error) {
-    console.error('Error submitting job:', error);
-    alert('Failed to submit job');
-  }
-}
-
-function handleCancel() {
-  window.location.href = 'spaces.html';
+  document.getElementById('spaceInput').textContent = space.input + ' in';
+  document.getElementById('spaceOutput').textContent = space.output + ' out';
+  document.getElementById('aboutSpace').textContent = space.about;
 }
 
 function handleAuth() {
@@ -530,8 +259,7 @@ function handleAuth() {
   }
 }
 
-document.getElementById('submitBtn').addEventListener('click', handleSubmit);
-loadSpaceDetail();
+renderSpace();
 </script>
 </body>
 </html>

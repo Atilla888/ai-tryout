@@ -86,25 +86,12 @@
     .chip.on { background: #f5c030; border-color: #f5c030; color: #412402; }
 
     .count-label { font-size: 13px; color: #9ca3af; padding: 0 24px 14px; }
-    .spaces-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 0 24px 24px; }
+    .spaces-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 0 24px 24px; }
 
     .space-card {
       background: #fff; border: 1px solid #e6e7eb; border-radius: 18px;
       padding: 24px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
       display: flex; flex-direction: column; min-height: 220px;
-    }
-    .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 0 24px 24px; }
-    .skeleton-card {
-      border-radius: 18px; background: linear-gradient(90deg, #f0f2f5 25%, #e8eaee 37%, #f0f2f5 63%);
-      background-size: 200% 100%;
-      animation: pulse 1.5s ease-in-out infinite;
-      min-height: 220px;
-    }
-    .skeleton-line { height: 14px; width: 100%; border-radius: 999px; background: #e8eaee; margin-bottom: 16px; }
-    .skeleton-line.short { width: 60%; }
-    @keyframes pulse {
-      0% { background-position: -200px 0; }
-      100% { background-position: calc(200px + 100%) 0; }
     }
     .space-card:hover { border-color: #f5c030; box-shadow: 0 10px 30px rgba(245,192,48,.12); }
 
@@ -139,7 +126,7 @@
     }
 
     @media (max-width: 1100px) {
-      .spaces-grid, .skeleton-grid { grid-template-columns: 1fr; }
+      .spaces-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -198,107 +185,53 @@
 </div>
 
 <script>
-const API_URL = "/spaces";
+const SPACES = [
+  { id:1, name:"AceStep 1.5 – Music Generator", desc:"Generate music from a text prompt and style parameters. Output is a downloadable audio file.", task:"Audio", input:"Text", output:"Audio", date:"27.4.2026", queue:2 },
+  { id:2, name:"LTX 2.3 – Video Generator",      desc:"Generate short videos from text prompts using LTX 2.3. Custom duration and resolution supported.", task:"Video", input:"Text", output:"Video", date:"27.4.2026", queue:0 },
+  { id:3, name:"SAM 3D – Object Generator",       desc:"Create interactive 3D models from images using SAM. Output is a GLB file previewable in-browser.", task:"3D", input:"Image", output:"3D", date:"27.4.2026", queue:1 },
+];
+
 const PILL = { Audio:"pill-audio", Video:"pill-video", "3D":"pill-3d", Image:"pill-image", Text:"pill-text" };
 const FILTERS = ["All","Audio","Video","3D","Image","Text"];
 let activeFilter = "All";
-let spaces = [];
-let isLoading = false;
-let errorMessage = null;
 
 const chipsEl = document.getElementById("chips");
-FILTERS.forEach((filter, index) => {
-  const chip = document.createElement("span");
-  chip.className = "chip" + (filter === "All" ? " on" : "");
-  chip.textContent = filter;
-  chip.addEventListener("click", () => {
-    activeFilter = filter;
-    document.querySelectorAll(".chip").forEach((el, i) => el.className = "chip" + (i === index ? " on" : ""));
+FILTERS.forEach(f => {
+  const c = document.createElement("span");
+  c.className = "chip" + (f === "All" ? " on" : "");
+  c.textContent = f;
+  c.addEventListener("click", () => {
+    activeFilter = f;
+    document.querySelectorAll(".chip").forEach((el, i) => el.className = "chip" + (FILTERS[i] === f ? " on" : ""));
     render();
   });
-  chipsEl.appendChild(chip);
+  chipsEl.appendChild(c);
 });
 
-async function loadSpaces() {
-  isLoading = true;
-  errorMessage = null;
-  render();
-
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error(`API returned ${response.status}`);
-    spaces = await response.json();
-  } catch (error) {
-    spaces = [];
-    errorMessage = error.message || "Unable to reach the spaces API.";
-  } finally {
-    isLoading = false;
-    render();
-  }
-}
-
 function render() {
+  const q = document.getElementById("searchInp").value.toLowerCase();
+  const filtered = SPACES.filter(s =>
+    (activeFilter === "All" || s.task === activeFilter) &&
+    (!q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.task.toLowerCase().includes(q))
+  );
+  document.getElementById("countLabel").textContent = filtered.length + " space" + (filtered.length !== 1 ? "s" : "") + " available";
   const grid = document.getElementById("grid");
-  const countLabel = document.getElementById("countLabel");
-  const query = document.getElementById("searchInp").value.toLowerCase();
-
-  if (isLoading) {
-    countLabel.textContent = "Loading spaces...";
-    grid.className = "skeleton-grid";
-    grid.innerHTML = Array.from({ length: 3 }).map(() => `
-      <div class="skeleton-card">
-        <div class="skeleton-line short"></div>
-        <div class="skeleton-line"></div>
-        <div class="skeleton-line"></div>
-        <div class="skeleton-line short"></div>
-      </div>
-    `).join("");
-    return;
-  }
-
-  if (errorMessage) {
-    countLabel.textContent = "Unable to load spaces.";
-    grid.className = "spaces-grid";
-    grid.innerHTML = `
-      <div class="empty-state">
-        <p>Unable to load spaces from the API.</p>
-        <p>${errorMessage}</p>
-        <button class="btn-reset" onclick="loadSpaces()">Retry</button>
-      </div>`;
-    return;
-  }
-
-  const filtered = spaces.filter(space => {
-    const matchesFilter = activeFilter === "All" || space.task === activeFilter;
-    const matchesQuery = !query || [space.name, space.desc, space.task, space.input, space.output]
-      .some(value => value.toLowerCase().includes(query));
-    return matchesFilter && matchesQuery;
-  });
-
-  countLabel.textContent = `${filtered.length} space${filtered.length !== 1 ? "s" : ""} available`;
-  grid.className = "spaces-grid";
-
   if (!filtered.length) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <p>No spaces available for the current filter or search.</p>
-        <button class="btn-reset" onclick="resetFilters()">Clear filters</button>
-      </div>`;
+    grid.innerHTML = `<div class="empty-state"><p>No spaces match your search.</p><button class="btn-reset" onclick="resetFilters()">Clear filters</button></div>`;
     return;
   }
-
-  grid.innerHTML = filtered.map(space => `
-    <div class="space-card" onclick="openSpace(${space.id})">
-      <div class="sc-name">${space.name}</div>
-      <div class="sc-desc">${space.desc}</div>
+  grid.innerHTML = filtered.map(s => `
+    <div class="space-card" onclick="window.location.href='space-detail.html?id=${s.id}'">
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-desc">${s.desc}</div>
       <div class="sc-badges">
-        <span class="pill ${PILL[space.task]}">${space.task}</span>
-        <span class="pill ${PILL[space.input]}">${space.input} in</span>
-        <span class="pill ${PILL[space.output]}">${space.output} out</span>
+        <span class="pill ${PILL[s.task]}">${s.task}</span>
+        <span class="pill ${PILL[s.input]}">${s.input} in</span>
+        <span class="pill ${PILL[s.output]}">${s.output} out</span>
       </div>
       <div class="sc-footer">
-        <span class="sc-meta">${space.date || "TBD"} · ${space.queue > 0 ? space.queue + " in queue" : "Available"}</span>
-        <button class="btn-open" onclick="event.stopPropagation(); openSpace(${space.id})">Open</button>
+        <span class="sc-meta">${s.date} · ${s.queue > 0 ? s.queue + " in queue" : "Available"}</span>
+        <button class="btn-open" onclick="event.stopPropagation(); window.location.href='space-detail.html?id=${s.id}'">Open</button>
       </div>
     </div>`).join("");
 }
@@ -306,12 +239,8 @@ function render() {
 function resetFilters() {
   activeFilter = "All";
   document.getElementById("searchInp").value = "";
-  document.querySelectorAll(".chip").forEach((el, index) => el.className = "chip" + (index === 0 ? " on" : ""));
+  document.querySelectorAll(".chip").forEach((el, i) => el.className = "chip" + (i === 0 ? " on" : ""));
   render();
-}
-
-function openSpace(spaceId) {
-  window.location.href = `/spaces/${spaceId}`;
 }
 
 function handleAuth() {
@@ -324,7 +253,7 @@ function handleAuth() {
   }
 }
 
-loadSpaces();
+render();
 </script>
 </body>
 </html>
