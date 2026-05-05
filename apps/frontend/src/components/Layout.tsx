@@ -1,28 +1,13 @@
-import { Outlet, NavLink } from 'react-router-dom'
-import './Layout.css'
+import { Outlet, Link } from 'react-router-dom'
 
 function Layout() {
   return (
     <>
-      <nav className="sara-nav">
-        <NavLink to="/" className="sara-brand">
-          <div className="sara-brand-text">
-            <span className="sara-brand-name">SARA</span>
-            <span className="sara-brand-sub">System for AI-Research &amp; Assessment</span>
-          </div>
-        </NavLink>
-
-        <div className="sara-nav-links">
-          <NavLink to="/" end className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
-            Spaces
-          </NavLink>
-          <NavLink to="/history" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
-            History
-          </NavLink>
-        </div>
+      <nav>
+        <Link to="/">Home</Link>
+        <Link to="/history">History</Link>
       </nav>
-
-      <main className="sara-content">
+      <main>
         <Outlet />
       </main>
     </>
