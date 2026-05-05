@@ -1,48 +1,60 @@
-# Environment variables
+# Secrets and credentials
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.egg-info/
-dist/
-build/
-*.egg
+*.so
+.Python
 .venv/
 venv/
 env/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
 
 # Node / Frontend
 node_modules/
-frontend/dist/
-frontend/.vite/
+.next/
+.nuxt/
+.cache/
+*.local
 
-# IDE
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
 # Docker
 docker-compose.override.yml
 
-# Kubernetes secrets
-k8s/*-secret.yaml
+# Artifacts and generated files
+storage/
+*.log
+*.tmp
 
-# Test / Coverage
-.coverage
-htmlcov/
-.pytest_cache/
-
-# Alembic
-backend/alembic/versions/__pycache__/
-
-# MinIO local data (if mounted)
-minio-data/
+# Kubernetes
+infra/k8s/secrets/
+kubeconfig

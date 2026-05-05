@@ -1,79 +1,181 @@
-# AI Spaces
+# AI-Spaces-Tryout
 
-A university platform for running AI models (object detection, video generation, 3D reconstruction) through a web interface. Users upload files, the platform runs inference in isolated Kubernetes Jobs, and results are returned for preview and download.
+> A Hof University platform where users can browse AI spaces, submit input through browser UIs, run AI model containers on demand in Kubernetes, track progress, preview results, and download generated files.
 
-## Prerequisites
+Inspired by [Hugging Face Spaces](https://huggingface.co/spaces), this platform is scoped and adapted for Hof University infrastructure.
 
-- [Git](https://git-scm.com/downloads)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
-- [Node.js v20+](https://nodejs.org/) (LTS)
-- [Python 3.11+](https://www.python.org/downloads/)
+---
 
-## Quick Start
+## What It Does
 
-1. **Clone the repository and create your `.env` file:**
+1. A user opens the platform and sees available AI spaces (model cards).
+2. The user selects a space and fills in an input form rendered from configuration.
+3. The platform creates an asynchronous job and shows queue position.
+4. The orchestrator picks the job and starts a model container in Kubernetes.
+5. The model reports progress back to the backend.
+6. On completion the user previews the result in the browser, downloads the output, and receives a browser notification.
+7. The user can revisit their private job history for up to 14 days.
 
-   ```bash
-   git clone <repo-url> ai-spaces
-   cd ai-spaces
-   cp .env.example .env
-   ```
+---
 
-2. **Start all services:**
+## Repository Layout
 
-   ```bash
-   docker compose up --build
-   ```
+```
+.
+├── apps/
+│   ├── frontend/           # React + TypeScript + Vite SPA
+│   ├── backend-api/        # FastAPI REST backend
+│   └── orchestrator/       # Job orchestrator service (Kubernetes-aware)
+├── models/
+│   ├── common-runner-template/   # Reference model runner contract & template
+│   ├── object-detection-space/   # YOLO-based object detection model runner
+│   ├── audio-space/              # Audio model runner (speech-to-text / TTS)
+│   └── video-or-3d-space/        # Video / 3D generation model runner
+├── infra/
+│   ├── docker/             # Shared Dockerfile snippets / base images
+│   ├── k8s/                # Kubernetes manifests (Jobs, Deployments, Services)
+│   └── scripts/            # Helper scripts (seed data, cleanup, deploy)
+├── tests/
+│   └── e2e/                # End-to-end tests (Playwright or similar)
+├── docs/                   # Project documentation
+├── .env.example            # All required environment variables (no secrets)
+├── .gitlab-ci.yml          # CI pipeline (lint)
+└── docker-compose.yml      # Local development stack
+```
 
-3. **Open in your browser:**
+---
 
-   | URL | Service |
-   |---|---|
-   | http://localhost:3000 | Frontend |
-   | http://localhost:8000/docs | Backend API (Swagger UI) |
-   | http://localhost:5050 | pgAdmin (database browser) |
-   | http://localhost:9001 | MinIO console (file storage) |
+## Quick Start (Local Development)
 
-## Development Workflow
+### Prerequisites
 
-For faster iteration, run infrastructure in Docker and the app locally:
+| Tool | Minimum Version |
+|------|----------------|
+| Docker + Docker Compose | Docker 24+ |
+| Node.js | 20 LTS |
+| Python | 3.11+ |
+| Git | any recent |
+
+### 1. Clone the repository
 
 ```bash
-# Start only infrastructure services
-docker compose up postgres minio pgadmin
+git clone https://gitlab.hof-university.de/atilla888/ai-spaces.git
+cd ai-spaces
+```
 
-# Terminal 1: backend
-cd backend
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+# Edit .env only if you need non-default ports or credentials
+```
+
+**Never commit the `.env` file.** It is listed in `.gitignore`.
+
+### 3. Start the full stack
+
+```bash
+docker compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| Frontend (dev server) | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| Backend Swagger docs | http://localhost:8000/docs |
+| PostgreSQL | localhost:5432 |
+
+### 4. Run the backend in isolation (no Docker)
+
+```bash
+cd apps/backend-api
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn main:app --reload
+```
 
-# Terminal 2: frontend
-cd frontend
+### 5. Run the frontend in isolation (no Docker)
+
+```bash
+cd apps/frontend
 npm install
 npm run dev
 ```
 
+---
+
 ## Running Tests
 
+### Backend unit tests
+
 ```bash
-cd backend
-pytest tests/ -v
+cd apps/backend-api
+pytest tests/unit/
 ```
 
-## Project Structure
+### Backend integration tests
 
-```
-ai-spaces/
-├── frontend/          # React + Vite + Tailwind (TypeScript)
-├── backend/           # FastAPI + SQLAlchemy (Python)
-├── models/            # AI model containers (one per model)
-│   ├── yolo-v11/      # Object detection (Sprint 1)
-│   ├── ltx-video/     # Video generation (Sprint 2)
-│   └── sam-3d/        # 3D reconstruction (Sprint 2)
-├── k8s/               # Kubernetes manifests
-├── docs/              # Project documentation
-├── docker-compose.yml # Local multi-service setup
-└── .env.example       # Environment variable template
+```bash
+pytest tests/integration/
 ```
 
-See [docs/implementation-guide.md](docs/implementation-guide.md) for detailed explanations of every technology and how the services connect.
+### End-to-end tests
+
+```bash
+cd tests/e2e
+npm install
+npx playwright test
+```
+
+### Lint
+
+```bash
+# Python
+cd apps/backend-api && ruff check .
+
+# TypeScript / Frontend
+cd apps/frontend && npm run lint
+```
+
+---
+
+## Architecture
+
+**High-level flow:**
+
+```
+Browser → Backend API → PostgreSQL (job queue)
+                      ↓
+              Orchestrator Service
+                      ↓
+             Kubernetes Cluster
+                      ↓
+           Model Runner Container
+                      ↓
+       Backend API + Persistent Storage
+```
+
+---
+
+## Environment Variables
+
+All variables are documented in [`.env.example`](.env.example). Required variables:
+
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_USER` | Database user |
+| `POSTGRES_PASSWORD` | Database password (use a strong value in production) |
+| `POSTGRES_DB` | Database name |
+| `DATABASE_URL` | Full SQLAlchemy async connection string |
+| `SECRET_KEY` | Backend secret key for token signing |
+| `STORAGE_PATH` | Filesystem path where artifacts are persisted |
+| `VITE_API_BASE_URL` | Backend API base URL used by the frontend |
+
+
+---
+
+## Team
+
+Hof University of Applied Sciences — Interdisciplinary Software Development Project  
+Course topic: Hugging Face Spaces for Hof University / AI-Spaces-Tryout
