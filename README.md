@@ -51,12 +51,10 @@ Inspired by [Hugging Face Spaces](https://huggingface.co/spaces), this platform 
 
 | Tool | Minimum Version |
 |------|----------------|
-| Docker + Docker Compose **or** Podman + podman-compose | Docker 24+ / Podman 3.4+ |
+| Docker + Docker Compose | Docker 24+ |
 | Node.js | 20 LTS |
 | Python | 3.11+ |
 | Git | any recent |
-
-> **Note:** On Hof University laptops use `podman-compose` in place of `docker compose`.
 
 ### 1. Clone the repository
 
@@ -78,8 +76,6 @@ cp .env.example .env
 
 ```bash
 docker compose up --build
-# or
-podman-compose up --build
 ```
 
 | Service | URL |
