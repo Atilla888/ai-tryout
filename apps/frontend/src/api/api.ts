@@ -16,6 +16,36 @@ export interface Space {
   visibility: SpaceVisibility
 }
 
+export interface InputOption {
+  value: string
+  label: string
+}
+
+export interface InputFieldConfig {
+  name: string
+  type: string
+  label: string
+  description?: string
+  required?: boolean
+  placeholder?: string
+  maxLength?: number
+  min?: number
+  max?: number
+  options?: InputOption[]
+  mime_types?: string[]
+  max_size_mb?: number
+}
+
+export interface SpaceDetail extends Space {
+  owner_id: string | null
+  container_image: string | null
+  resource_requirements: Record<string, unknown>
+  ui_config: { inputs: InputFieldConfig[] }
+  runner_config: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
 export interface Job {
   id: string
   space_id: string
@@ -32,9 +62,30 @@ export interface Job {
   error_message: string | null
 }
 
+export interface JobSubmitResponse {
+  id: string
+  status: JobStatus
+  queue_position: number | null
+}
+
 export async function fetchSpaces(): Promise<Space[]> {
   const res = await fetch(`${BASE_URL}/spaces`)
   return res.json() as Promise<Space[]>
+}
+
+export async function fetchSpace(id: string): Promise<SpaceDetail> {
+  const res = await fetch(`${BASE_URL}/spaces/${id}`)
+  if (!res.ok) throw new Error(`Failed to fetch space: ${res.status}`)
+  return res.json() as Promise<SpaceDetail>
+}
+
+export async function submitJob(spaceId: string, payload: FormData): Promise<JobSubmitResponse> {
+  const res = await fetch(`${BASE_URL}/spaces/${spaceId}/jobs`, {
+    method: 'POST',
+    body: payload,
+  })
+  if (!res.ok) throw new Error(`Submit failed: ${res.status}`)
+  return res.json() as Promise<JobSubmitResponse>
 }
 
 export async function fetchJob(jobId: string): Promise<Job> {
