@@ -47,6 +47,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Claude Code
+.claude/
+
 # Docker
 docker-compose.override.yml
 
