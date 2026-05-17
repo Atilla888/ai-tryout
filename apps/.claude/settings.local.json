@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /Users/sarahsantos/Desktop/Studium/hof-spaces-video/frontend -type f | sort)",
-      "Read(//Users/sarahsantos/Desktop/Studium/hof-spaces-video/frontend/**)",
-      "Bash(npm run *)"
-    ]
-  }
-}
