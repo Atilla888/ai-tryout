@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SARA – Spaces</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f6f7fb; color: #1a1a1a; min-height: 100vh; }
+
+    .sara-nav {
+      background: #fff;
+      border-bottom: 3px solid #f5c030;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 72px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .sara-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .hof-logo {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .hof-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .sara-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+    .sara-brand-name { font-size: 18px; font-weight: 800; color: #1a1a1a; }
+    .sara-brand-sub { font-size: 11px; color: #6e7280; letter-spacing: 0.02em; }
+
+    .sara-nav-links { display: flex; gap: 28px; margin-left: 36px; font-size: 14px; }
+    .sara-nav-link { color: #525252; text-decoration: none; font-weight: 700; transition: color .15s; }
+    .sara-nav-link:hover,
+    .sara-nav-link.active { color: #1a1a1a; }
+
+    .sara-nav-right { display: flex; align-items: center; }
+    .sara-signin {
+      border-radius: 999px;
+      border: none;
+      background: #f5c030;
+      color: #412402;
+      padding: 10px 22px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .sara-signin:hover { background: #e6b52b; transform: translateY(-1px); }
+
+    .sara-content { max-width: 1360px; margin: 0 auto; padding: 28px 24px; }
+    .sara-section-card { background: #fff; border-radius: 20px; border: 1px solid #e6e7eb; overflow: hidden; }
+    .sara-section-header { padding: 24px 24px 12px; display: flex; align-items: center; gap: 10px; }
+    .sara-section-title { font-size: 18px; font-weight: 800; color: #1a1a1a; }
+    .sara-hero { padding: 0 24px 20px; color: #444; }
+    .sara-hero p { max-width: 720px; font-size: 15px; line-height: 1.75; color: #6e7280; margin-top: 8px; }
+
+    .search-filter-bar { padding: 0 24px 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .sara-search {
+      flex: 1; max-width: 380px; padding: 12px 16px;
+      border: 1px solid #ddd; border-radius: 999px; font-size: 14px;
+      color: #333; background: #fafafa; outline: none;
+    }
+    .sara-search:focus { border-color: #f5c030; background: #fff; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      padding: 7px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555;
+      transition: all .15s; user-select: none;
+    }
+    .chip:hover { border-color: #aaa; color: #333; }
+    .chip.on { background: #f5c030; border-color: #f5c030; color: #412402; }
+
+    .count-label { font-size: 13px; color: #9ca3af; padding: 0 24px 14px; }
+    .spaces-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 0 24px 24px; }
+
+    .space-card {
+      background: #fff; border: 1px solid #e6e7eb; border-radius: 18px;
+      padding: 24px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+      display: flex; flex-direction: column; min-height: 220px;
+    }
+    .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 0 24px 24px; }
+    .skeleton-card {
+      border-radius: 18px; background: linear-gradient(90deg, #f0f2f5 25%, #e8eaee 37%, #f0f2f5 63%);
+      background-size: 200% 100%;
+      animation: pulse 1.5s ease-in-out infinite;
+      min-height: 220px;
+    }
+    .skeleton-line { height: 14px; width: 100%; border-radius: 999px; background: #e8eaee; margin-bottom: 16px; }
+    .skeleton-line.short { width: 60%; }
+    @keyframes pulse {
+      0% { background-position: -200px 0; }
+      100% { background-position: calc(200px + 100%) 0; }
+    }
+    .space-card:hover { border-color: #f5c030; box-shadow: 0 10px 30px rgba(245,192,48,.12); }
+
+    .sc-name { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; line-height: 1.3; }
+    .sc-desc { font-size: 13px; color: #6e7280; line-height: 1.7; margin-bottom: 18px; flex: 1; }
+    .sc-badges { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+
+    .pill { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; }
+    .pill-audio { background: #22a06b; }
+    .pill-video { background: #7c3aed; }
+    .pill-3d    { background: #db2777; }
+    .pill-image { background: #dc2626; }
+    .pill-text  { background: #2563eb; }
+
+    .sc-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 16px; border-top: 1px solid #f1f2f4;
+    }
+    .sc-meta { font-size: 12px; color: #9ca3af; }
+    .btn-open {
+      background: #f5c030; border: 1px solid #f5c030; border-radius: 999px;
+      padding: 10px 22px; font-size: 13px; font-weight: 700; color: #412402;
+      cursor: pointer; transition: background .15s, transform .15s;
+    }
+    .btn-open:hover { background: #e6b52b; transform: translateY(-1px); }
+
+    .empty-state { grid-column: 1/-1; text-align: center; padding: 3rem; color: #9ca3af; }
+    .empty-state p { font-size: 14px; margin-bottom: 12px; }
+    .btn-reset {
+      background: #f5c030; border: none; border-radius: 999px;
+      padding: 10px 22px; font-size: 13px; font-weight: 700; color: #412402; cursor: pointer;
+    }
+
+    @media (max-width: 1100px) {
+      .spaces-grid, .skeleton-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="sara-nav">
+  <a class="sara-brand" href="dashboard.html">
+    <div class="hof-logo">
+      <img src="logo.png" alt="SARA logo" />
+    </div>
+    <div class="sara-brand-text">
+      <span class="sara-brand-name">SARA</span>
+      <span class="sara-brand-sub">System for AI-Research &amp; Assessment</span>
+    </div>
+  </a>
+
+  <div class="sara-nav-links">
+    <a class="sara-nav-link" href="#">Browse</a>
+    <a class="sara-nav-link" href="#">Projects</a>
+    <a class="sara-nav-link" href="#">Datasets</a>
+    <a class="sara-nav-link" href="#">Models</a>
+    <a class="sara-nav-link" href="#">Leaderboards</a>
+    <a class="sara-nav-link" href="#">Evaluations</a>
+    <a class="sara-nav-link active" href="spaces.html">Spaces</a>
+    <a class="sara-nav-link" href="#">Groups</a>
+  </div>
+
+  <div class="sara-nav-right">
+    <button class="sara-signin" onclick="handleAuth()">Sign In</button>
+  </div>
+</nav>
+
+<div class="sara-content">
+  <div class="sara-section-card">
+    <div class="sara-section-header">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#555" stroke-width="1.5">
+        <rect x="1" y="1" width="6" height="6" rx="1"/>
+        <rect x="9" y="1" width="6" height="6" rx="1"/>
+        <rect x="1" y="9" width="6" height="6" rx="1"/>
+        <rect x="9" y="9" width="6" height="6" rx="1"/>
+      </svg>
+      <span class="sara-section-title">Spaces</span>
+    </div>
+    <div class="sara-hero">
+      <p>Browse the available AI spaces in your SARA dashboard. Select a space to open the job interface, review input options and monitor queue status.</p>
+    </div>
+
+    <div class="search-filter-bar">
+      <input class="sara-search" id="searchInp" type="text" placeholder="Search spaces..." oninput="render()">
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="count-label" id="countLabel"></div>
+    <div class="spaces-grid" id="grid"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = "/spaces";
+const PILL = { Audio:"pill-audio", Video:"pill-video", "3D":"pill-3d", Image:"pill-image", Text:"pill-text" };
+const FILTERS = ["All","Audio","Video","3D","Image","Text"];
+let activeFilter = "All";
+let spaces = [];
+let isLoading = false;
+let errorMessage = null;
+
+const chipsEl = document.getElementById("chips");
+FILTERS.forEach((filter, index) => {
+  const chip = document.createElement("span");
+  chip.className = "chip" + (filter === "All" ? " on" : "");
+  chip.textContent = filter;
+  chip.addEventListener("click", () => {
+    activeFilter = filter;
+    document.querySelectorAll(".chip").forEach((el, i) => el.className = "chip" + (i === index ? " on" : ""));
+    render();
+  });
+  chipsEl.appendChild(chip);
+});
+
+async function loadSpaces() {
+  isLoading = true;
+  errorMessage = null;
+  render();
+
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error(`API returned ${response.status}`);
+    spaces = await response.json();
+  } catch (error) {
+    spaces = [];
+    errorMessage = error.message || "Unable to reach the spaces API.";
+  } finally {
+    isLoading = false;
+    render();
+  }
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  const countLabel = document.getElementById("countLabel");
+  const query = document.getElementById("searchInp").value.toLowerCase();
+
+  if (isLoading) {
+    countLabel.textContent = "Loading spaces...";
+    grid.className = "skeleton-grid";
+    grid.innerHTML = Array.from({ length: 3 }).map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+    `).join("");
+    return;
+  }
+
+  if (errorMessage) {
+    countLabel.textContent = "Unable to load spaces.";
+    grid.className = "spaces-grid";
+    grid.innerHTML = `
+      <div class="empty-state">
+        <p>Unable to load spaces from the API.</p>
+        <p>${errorMessage}</p>
+        <button class="btn-reset" onclick="loadSpaces()">Retry</button>
+      </div>`;
+    return;
+  }
+
+  const filtered = spaces.filter(space => {
+    const matchesFilter = activeFilter === "All" || space.task === activeFilter;
+    const matchesQuery = !query || [space.name, space.desc, space.task, space.input, space.output]
+      .some(value => value.toLowerCase().includes(query));
+    return matchesFilter && matchesQuery;
+  });
+
+  countLabel.textContent = `${filtered.length} space${filtered.length !== 1 ? "s" : ""} available`;
+  grid.className = "spaces-grid";
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <p>No spaces available for the current filter or search.</p>
+        <button class="btn-reset" onclick="resetFilters()">Clear filters</button>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(space => `
+    <div class="space-card" onclick="openSpace(${space.id})">
+      <div class="sc-name">${space.name}</div>
+      <div class="sc-desc">${space.desc}</div>
+      <div class="sc-badges">
+        <span class="pill ${PILL[space.task]}">${space.task}</span>
+        <span class="pill ${PILL[space.input]}">${space.input} in</span>
+        <span class="pill ${PILL[space.output]}">${space.output} out</span>
+      </div>
+      <div class="sc-footer">
+        <span class="sc-meta">${space.date || "TBD"} · ${space.queue > 0 ? space.queue + " in queue" : "Available"}</span>
+        <button class="btn-open" onclick="event.stopPropagation(); openSpace(${space.id})">Open</button>
+      </div>
+    </div>`).join("");
+}
+
+function resetFilters() {
+  activeFilter = "All";
+  document.getElementById("searchInp").value = "";
+  document.querySelectorAll(".chip").forEach((el, index) => el.className = "chip" + (index === 0 ? " on" : ""));
+  render();
+}
+
+function openSpace(spaceId) {
+  window.location.href = `/spaces/${spaceId}`;
+}
+
+function handleAuth() {
+  if (localStorage.getItem("jwt_token")) {
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("username");
+    location.reload();
+  } else {
+    window.location.href = "signin.html";
+  }
+}
+
+loadSpaces();
+</script>
+</body>
+</html>

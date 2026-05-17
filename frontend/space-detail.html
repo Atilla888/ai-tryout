@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SARA – Space Detail</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f6f7fb; min-height: 100vh; color: #1a1a1a; }
+
+    .sara-nav {
+      background: #fff;
+      border-bottom: 3px solid #f5c030;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 72px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .sara-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .hof-logo {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .hof-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .sara-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+    .sara-brand-name { font-size: 18px; font-weight: 800; color: #1a1a1a; }
+    .sara-brand-sub { font-size: 11px; color: #6e7280; letter-spacing: 0.02em; }
+
+    .sara-nav-links { display: flex; gap: 28px; margin-left: 36px; font-size: 14px; }
+    .sara-nav-link { color: #525252; text-decoration: none; font-weight: 700; transition: color .15s; }
+    .sara-nav-link:hover,
+    .sara-nav-link.active { color: #1a1a1a; }
+
+    .sara-nav-right { display: flex; align-items: center; }
+    .sara-signin {
+      border-radius: 999px;
+      border: none;
+      background: #f5c030;
+      color: #412402;
+      padding: 10px 22px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .sara-signin:hover { background: #e6b52b; transform: translateY(-1px); }
+
+    .sara-content { max-width: 1360px; margin: 0 auto; padding: 28px 24px; }
+    .breadcrumbs { font-size: 12px; color: #777; margin-bottom: 14px; }
+    .breadcrumbs span + span::before { content: '›'; margin: 0 8px; color: #bbb; }
+
+    .space-top { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .space-header { background: #fff; border: 1px solid #e6e7eb; border-radius: 20px; padding: 28px; flex: 1 1 640px; }
+    .space-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .meta-pill { background: #f5c030; color: #412402; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; }
+    .space-heading { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+    .space-owner { font-size: 13px; color: #6e7280; }
+    .space-subtle { font-size: 14px; color: #555; margin-top: 10px; line-height: 1.7; }
+
+    .page-grid { display: grid; grid-template-columns: 1.65fr 1fr; gap: 18px; align-items: start; }
+    .panel, .sidebar-card { background: #fff; border: 1px solid #e6e7eb; border-radius: 20px; padding: 24px; }
+    .panel h2 { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; color: #555; margin-bottom: 18px; }
+    .form-row { margin-bottom: 18px; }
+    .form-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #333; }
+    .required-indicator { color: #dc2626; }
+    .form-description { font-size: 12px; color: #6e7280; margin-bottom: 8px; }
+    .form-row input[type=text], .form-row input[type=number], .form-row textarea, .form-row select { width: 100%; border: 1px solid #d8d8d8; border-radius: 14px; padding: 12px 16px; font-size: 14px; color: #222; background: #fafafa; }
+    .form-row input:focus, .form-row textarea:focus, .form-row select:focus { outline: none; border-color: #f5c030; background: #fff; }
+    .form-row textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+    .drop-zone { border: 2px dashed #dcdcdc; border-radius: 16px; padding: 32px; text-align: center; color: #666; background: #fcfcfc; cursor: pointer; transition: border-color .15s, background .15s; }
+    .drop-zone:hover { border-color: #f5c030; background: #fffbf0; }
+    .drop-zone.dragover { border-color: #f5c030; background: #fffbf0; }
+    .drop-zone strong { display: block; margin-bottom: 10px; color: #333; }
+    .drop-zone input[type=file] { display: none; }
+    .drop-note { font-size: 12px; color: #999; margin-top: 8px; }
+    .input-error { border-color: #dc2626 !important; background: #fef2f2 !important; }
+    .error-message { font-size: 12px; color: #dc2626; margin-top: 6px; display: none; }
+    .error-message.show { display: block; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 10px; }
+    .input-slider { width: 100%; }
+    .button-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .btn-primary, .btn-secondary { border-radius: 14px; padding: 14px 24px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-primary { background: #f5c030; color: #412402; }
+    .btn-secondary { background: #fff; color: #333; border: 1px solid #d0d0d0; }
+    .btn-secondary:hover { background: #fafafa; }
+
+    .status-card { background: #fff9e5; border: 1px solid #f1d383; border-radius: 20px; padding: 22px; margin-bottom: 18px; }
+    .status-card strong { display: block; margin-bottom: 10px; }
+    .status-line { font-size: 14px; color: #444; margin-bottom: 10px; }
+    .progress-bar { width: 100%; height: 10px; border-radius: 999px; background: #f2e1b8; overflow: hidden; margin-top: 12px; }
+    .progress-bar span { display: block; height: 100%; width: 42%; background: #f5c030; }
+
+    .sidebar-block { margin-bottom: 18px; }
+    .sidebar-card p { font-size: 13px; color: #555; line-height: 1.75; }
+    .list-compact { font-size: 13px; color: #444; list-style: none; padding-left: 0; margin: 0; }
+    .list-compact li { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .list-compact li:last-child { border-bottom: none; }
+    .list-compact span { display: block; }
+    .list-compact .job-id { font-weight: 700; color: #1a1a1a; }
+    .sidebar-actions { display: grid; gap: 12px; margin-bottom: 18px; }
+    .sidebar-actions button { width: 100%; border-radius: 14px; padding: 14px; font-size: 13px; font-weight: 700; border: 1px solid transparent; cursor: pointer; }
+    .action-download { background: #1a1a1a; color: #fff; }
+    .action-retry { background: #fff; color: #1a1a1a; border-color: #d0d0d0; }
+    .action-link { background: #f5c030; color: #412402; }
+
+    .about-title { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 12px; }
+    .about-copy { font-size: 13px; color: #555; line-height: 1.7; }
+
+    @media (max-width: 1080px) {
+      .page-grid { grid-template-columns: 1fr; }
+      .space-top { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+<nav class="sara-nav">
+  <a class="sara-brand" href="dashboard.html">
+    <div class="hof-logo">
+      <img src="logo.png" alt="SARA logo" />
+    </div>
+    <div class="sara-brand-text">
+      <span class="sara-brand-name">SARA</span>
+      <span class="sara-brand-sub">System for AI-Research &amp; Assessment</span>
+    </div>
+  </a>
+
+  <div class="sara-nav-links">
+    <a class="sara-nav-link" href="#">Browse</a>
+    <a class="sara-nav-link" href="#">Projects</a>
+    <a class="sara-nav-link" href="#">Datasets</a>
+    <a class="sara-nav-link" href="#">Models</a>
+    <a class="sara-nav-link" href="#">Leaderboards</a>
+    <a class="sara-nav-link" href="#">Evaluations</a>
+    <a class="sara-nav-link active" href="spaces.html">Spaces</a>
+    <a class="sara-nav-link" href="#">Groups</a>
+  </div>
+
+  <div class="sara-nav-right">
+    <button class="sara-signin" onclick="handleAuth()">Sign In</button>
+  </div>
+</nav>
+
+<div class="sara-content">
+  <div class="breadcrumbs"><span>Hub</span><span>Spaces</span><span id="breadcrumbName">Space name</span></div>
+
+  <div class="space-top">
+    <div class="space-header">
+      <div class="space-heading" id="spaceName">Space name</div>
+      <div class="space-owner" id="spaceMeta">Owner · Task type</div>
+      <div class="space-subtle" id="spaceDesc">A short description of the space and what the AI can create.</div>
+      <div class="space-meta">
+        <span class="meta-pill" id="spaceTask">Task</span>
+        <span class="meta-pill" id="spaceInput">Input</span>
+        <span class="meta-pill" id="spaceOutput">Output</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-grid">
+    <div class="panel">
+      <h2>Inputs</h2>
+      <form id="inputForm"></form>
+      <div class="button-row">
+        <button class="btn-secondary" onclick="handleCancel()">Cancel</button>
+        <button class="btn-primary" id="submitBtn">Submit</button>
+      </div>
+    </div>
+
+    <aside>
+      <div class="sidebar-card sidebar-actions">
+        <button class="action-download">Download</button>
+        <button class="action-retry">Run again</button>
+        <button class="action-link">View in My History</button>
+        <button class="action-link">Copy share link</button>
+      </div>
+
+      <div class="sidebar-card status-card">
+        <strong>Queue status</strong>
+        <div class="status-line">Position 3 of 7 · ~45s remaining</div>
+        <div class="progress-bar"><span></span></div>
+      </div>
+
+      <div class="sidebar-card sidebar-block">
+        <h2>Last runs</h2>
+        <ul class="list-compact">
+          <li><span class="job-id">job_1042</span><span>done</span></li>
+          <li><span class="job-id">job_1041</span><span>done</span></li>
+          <li><span class="job-id">job_1040</span><span>done</span></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-card sidebar-block">
+        <h2>About this space</h2>
+        <div class="about-copy" id="aboutSpace">This space runs the selected AI model and returns output based on your chosen inputs. The interface adapts to the content type and provides a preview after completion.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+let currentSpace = null;
+let formData = {};
+
+function getQueryParam(name) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(name);
+}
+
+async function loadSpaceDetail() {
+  const spaceId = getQueryParam('id');
+  if (!spaceId) {
+    window.location.href = 'spaces.html';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/spaces/${spaceId}`);
+    if (!response.ok) throw new Error(`Failed to fetch space detail: ${response.status}`);
+    currentSpace = await response.json();
+    renderSpaceHeader();
+    renderForm();
+  } catch (error) {
+    console.error('Error loading space:', error);
+    alert('Failed to load space details');
+  }
+}
+
+function renderSpaceHeader() {
+  const space = currentSpace;
+  document.getElementById('spaceName').textContent = space.name;
+  document.getElementById('breadcrumbName').textContent = space.name;
+  document.getElementById('spaceMeta').textContent = `${space.owner || 'Unknown'} · ${space.task.toLowerCase()} generation`;
+  document.getElementById('spaceDesc').textContent = space.description || '';
+  document.getElementById('spaceTask').textContent = space.task;
+  document.getElementById('spaceInput').textContent = space.input_type + ' in';
+  document.getElementById('spaceOutput').textContent = space.output_type + ' out';
+  document.getElementById('aboutSpace').textContent = space.about || space.description || '';
+}
+
+function renderForm() {
+  const form = document.getElementById('inputForm');
+  form.innerHTML = '';
+  formData = {};
+
+  const inputs = currentSpace.ui_config?.inputs || [];
+  if (inputs.length === 0) {
+    form.innerHTML = '<p style="color: #999; font-size: 13px;">No input fields configured.</p>';
+    return;
+  }
+
+  inputs.forEach(input => {
+    const fieldId = input.name;
+    formData[fieldId] = null;
+    const fieldWrapper = createFormField(input);
+    form.appendChild(fieldWrapper);
+  });
+}
+
+function createFormField(input) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'form-row';
+  wrapper.id = `field-${input.name}`;
+
+  const label = document.createElement('label');
+  label.htmlFor = input.name;
+  label.innerHTML = input.label + (input.required ? '<span class="required-indicator">*</span>' : '');
+
+  const description = document.createElement('div');
+  description.className = 'form-description';
+  description.textContent = input.description || '';
+
+  const errorMsg = document.createElement('div');
+  errorMsg.className = 'error-message';
+  errorMsg.id = `error-${input.name}`;
+
+  wrapper.appendChild(label);
+  if (input.description) wrapper.appendChild(description);
+
+  let control;
+
+  switch (input.type) {
+    case 'text':
+      control = document.createElement('input');
+      control.type = 'text';
+      control.id = input.name;
+      control.placeholder = input.placeholder || '';
+      if (input.maxLength) control.maxLength = input.maxLength;
+      control.addEventListener('input', (e) => {
+        formData[input.name] = e.target.value;
+        clearError(input.name);
+      });
+      break;
+
+    case 'textarea':
+      control = document.createElement('textarea');
+      control.id = input.name;
+      control.placeholder = input.placeholder || '';
+      if (input.maxLength) control.maxLength = input.maxLength;
+      control.addEventListener('input', (e) => {
+        formData[input.name] = e.target.value;
+        clearError(input.name);
+      });
+      break;
+
+    case 'number':
+      control = document.createElement('input');
+      control.type = 'number';
+      control.id = input.name;
+      control.placeholder = input.placeholder || '';
+      if (input.min !== undefined) control.min = input.min;
+      if (input.max !== undefined) control.max = input.max;
+      control.addEventListener('input', (e) => {
+        formData[input.name] = e.target.value ? parseFloat(e.target.value) : null;
+        clearError(input.name);
+      });
+      break;
+
+    case 'select':
+      control = document.createElement('select');
+      control.id = input.name;
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = input.placeholder || 'Select an option';
+      control.appendChild(placeholder);
+      (input.options || []).forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        control.appendChild(option);
+      });
+      control.addEventListener('change', (e) => {
+        formData[input.name] = e.target.value;
+        clearError(input.name);
+      });
+      break;
+
+    case 'image_upload':
+      control = createFileUpload(input, 'image/*', ['image/jpeg', 'image/png', 'image/webp']);
+      break;
+
+    case 'audio_upload':
+      control = createFileUpload(input, 'audio/*', ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm']);
+      break;
+
+    default:
+      console.warn(`Unsupported input type: ${input.type}. Rendering fallback text input.`);
+      control = document.createElement('input');
+      control.type = 'text';
+      control.id = input.name;
+      control.placeholder = input.placeholder || '';
+      control.addEventListener('input', (e) => {
+        formData[input.name] = e.target.value;
+        clearError(input.name);
+      });
+  }
+
+  wrapper.appendChild(control);
+  wrapper.appendChild(errorMsg);
+  return wrapper;
+}
+
+function createFileUpload(input, accept, allowedMimes) {
+  const container = document.createElement('div');
+  container.className = 'drop-zone';
+  container.id = input.name;
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = accept;
+  fileInput.id = `file-${input.name}`;
+
+  const dropLabel = document.createElement('strong');
+  dropLabel.textContent = 'Drop file or click to upload';
+
+  const note = document.createElement('span');
+  note.className = 'drop-note';
+  note.textContent = `Accepted: ${input.mime_types?.join(', ') || accept} · Max ${input.max_size_mb || 10} MB`;
+
+  container.appendChild(fileInput);
+  container.appendChild(dropLabel);
+  container.appendChild(note);
+
+  const handleFile = (file) => {
+    if (file) {
+      if (!allowedMimes.includes(file.type)) {
+        showError(input.name, `Invalid file type. Accepted: ${input.mime_types?.join(', ') || accept}`);
+        formData[input.name] = null;
+      } else if (file.size > (input.max_size_mb || 10) * 1024 * 1024) {
+        showError(input.name, `File too large. Max ${input.max_size_mb || 10} MB`);
+        formData[input.name] = null;
+      } else {
+        formData[input.name] = file;
+        clearError(input.name);
+        dropLabel.textContent = file.name;
+      }
+    }
+  };
+
+  fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+  container.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    container.classList.add('dragover');
+  });
+
+  container.addEventListener('dragleave', () => {
+    container.classList.remove('dragover');
+  });
+
+  container.addEventListener('drop', (e) => {
+    e.preventDefault();
+    container.classList.remove('dragover');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  container.addEventListener('click', () => fileInput.click());
+
+  return container;
+}
+
+function clearError(fieldName) {
+  const errorEl = document.getElementById(`error-${fieldName}`);
+  if (errorEl) errorEl.classList.remove('show');
+  const fieldEl = document.getElementById(fieldName) || document.getElementById(`field-${fieldName}`);
+  if (fieldEl) fieldEl.classList.remove('input-error');
+}
+
+function showError(fieldName, message) {
+  const errorEl = document.getElementById(`error-${fieldName}`);
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.classList.add('show');
+  }
+  const fieldEl = document.getElementById(fieldName) || document.getElementById(`field-${fieldName}`);
+  if (fieldEl) fieldEl.classList.add('input-error');
+}
+
+function validateForm() {
+  let isValid = true;
+  const inputs = currentSpace.ui_config?.inputs || [];
+
+  inputs.forEach(input => {
+    const value = formData[input.name];
+    clearError(input.name);
+
+    if (input.required && !value) {
+      showError(input.name, `${input.label} is required`);
+      isValid = false;
+    }
+
+    if (value && input.type === 'text' && input.maxLength && value.length > input.maxLength) {
+      showError(input.name, `Max ${input.maxLength} characters`);
+      isValid = false;
+    }
+
+    if (value && input.type === 'number') {
+      const num = parseFloat(value);
+      if (input.min !== undefined && num < input.min) {
+        showError(input.name, `Minimum value is ${input.min}`);
+        isValid = false;
+      }
+      if (input.max !== undefined && num > input.max) {
+        showError(input.name, `Maximum value is ${input.max}`);
+        isValid = false;
+      }
+    }
+  });
+
+  return isValid;
+}
+
+async function handleSubmit() {
+  if (!validateForm()) return;
+
+  const formPayload = new FormData();
+  const inputs = currentSpace.ui_config?.inputs || [];
+
+  inputs.forEach(input => {
+    const value = formData[input.name];
+    if (value instanceof File) {
+      formPayload.append(input.name, value);
+    } else if (value !== null && value !== undefined) {
+      formPayload.append(input.name, value);
+    }
+  });
+
+  try {
+    const response = await fetch(`/spaces/${currentSpace.id}/jobs`, {
+      method: 'POST',
+      body: formPayload
+    });
+    if (!response.ok) throw new Error(`Failed to submit job: ${response.status}`);
+    const result = await response.json();
+    window.location.href = `/jobs/${result.id}`;
+  } catch (error) {
+    console.error('Error submitting job:', error);
+    alert('Failed to submit job');
+  }
+}
+
+function handleCancel() {
+  window.location.href = 'spaces.html';
+}
+
+function handleAuth() {
+  if (localStorage.getItem('jwt_token')) {
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('username');
+    location.reload();
+  } else {
+    window.location.href = 'signin.html';
+  }
+}
+
+document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+loadSpaceDetail();
+</script>
+</body>
+</html>
