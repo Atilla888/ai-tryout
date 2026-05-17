@@ -34,5 +34,15 @@ async def cancel_job(job_id: uuid.UUID, db: DbSession) -> JobRead:
 @router.get("/jobs/{job_id}/artifacts", response_model=list[ArtifactRead])
 async def list_job_artifacts(job_id: uuid.UUID, db: DbSession) -> list[ArtifactRead]:
     """Return artifact metadata for a completed job."""
-    # TODO(S1-07): fetch artifacts by job_id
-    raise HTTPException(status_code=404, detail="Job not found")
+    from sqlalchemy import select
+
+    from app.models import Artifact, Job
+
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    artifacts_result = await db.execute(
+        select(Artifact).where(Artifact.job_id == job_id)
+    )
+    return artifacts_result.scalars().all()  # type: ignore[return-value]
