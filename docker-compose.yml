@@ -16,7 +16,7 @@ services:
   backend:
     image: localhost/ai-spaces-tryout_backend:latest
     build:
-      context: ./apps/backend-api
+      context: ./apps/backend
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
