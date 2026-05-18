@@ -1,30 +1,31 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
 from app.db import get_db
 from app.schemas.artifacts import ArtifactRead
-from app.schemas.jobs import JobRead, JobStatus
+from app.schemas.jobs import JobRead, JobStatus, JobSubmitResponse, TERMINAL_JOB_STATUSES
 from app.services.artifacts import list_artifacts_by_job_service
 from app.services.jobs import (
     cancel_job_service,
     create_job_service,
     get_job_by_id_service,
+    list_jobs_by_status_service,
 )
 from app.services.job_transitions import JobTransitionError
 from app.services.spaces import get_space_by_id_service
 
-router = APIRouter(tags=["/jobs"])
+router = APIRouter(tags=["jobs"])
 
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 STUB_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 
-@router.post("/spaces/{space_id}/jobs", response_model=JobRead, status_code=status.HTTP_201_CREATED)
+@router.post("/spaces/{space_id}/jobs", response_model=JobSubmitResponse, status_code=status.HTTP_201_CREATED)
 async def create_job(request: Request, db: db_dependency, space_id: UUID):
     form = await request.form()
     if not form:
@@ -56,6 +57,11 @@ async def create_job(request: Request, db: db_dependency, space_id: UUID):
     )
 
 
+@router.get("/jobs", response_model=list[JobRead])
+async def list_jobs(db: db_dependency, status_filter: JobStatus = Query(..., alias="status")):
+    return await list_jobs_by_status_service(db, status_filter)
+
+
 @router.get("/jobs/{job_id}", response_model=JobRead, status_code=status.HTTP_200_OK)
 async def get_job(db: db_dependency, job_id: UUID):
     job = await get_job_by_id_service(db=db, job_id=job_id)
@@ -78,11 +84,11 @@ async def cancel_job(db: db_dependency, job_id: UUID):
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
-    if job.status in {
-        JobStatus.CANCELLED.value,
-        JobStatus.COMPLETED.value,
-        JobStatus.FAILED.value,
-    }:
+    try:
+        current_status = JobStatus(job.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Unknown job status {job.status}") from exc
+    if current_status in TERMINAL_JOB_STATUSES:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Cannot cancel job with status {job.status}")
 
     try:

@@ -1,21 +1,34 @@
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from enum import StrEnum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class JobStatus(StrEnum):
     QUEUED = "QUEUED"
+    STARTING = "STARTING"
     RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
+    SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
+    CANCELLING = "CANCELLING"
     CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
 
 
-class JobCreate(BaseModel):
-    input_payload: dict[str, Any] = {}
+TERMINAL_JOB_STATUSES = frozenset({
+    JobStatus.SUCCEEDED,
+    JobStatus.FAILED,
+    JobStatus.CANCELLED,
+    JobStatus.EXPIRED,
+})
+
+ACTIVE_JOB_STATUSES = frozenset({
+    JobStatus.QUEUED,
+    JobStatus.STARTING,
+    JobStatus.RUNNING,
+    JobStatus.CANCELLING,
+})
 
 
 class JobSubmitResponse(BaseModel):
@@ -29,15 +42,19 @@ class JobRead(BaseModel):
     status: JobStatus
     progress_percent: int
     progress_message: str | None
+    queue_position: int | None = None
     error_code: str | None
     error_message: str | None
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
-    cancelled_at: datetime | None
+    cancelled_at: datetime | None = None
     expires_at: datetime | None
-    input_payload: dict[str, Any]
     space_id: UUID
     user_id: UUID
 
     model_config = {"from_attributes": True}
+
+
+class JobCreate(BaseModel):
+    input_payload: dict = Field(default_factory=dict)

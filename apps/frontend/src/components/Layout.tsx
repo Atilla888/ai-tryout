@@ -4,25 +4,25 @@ import './Layout.css'
 function Layout() {
   return (
     <>
-      <nav className="sara-nav">
-        <NavLink to="/" className="sara-brand">
-          <div className="sara-brand-text">
-            <span className="sara-brand-name">SARA</span>
-            <span className="sara-brand-sub">System for AI-Research &amp; Assessment</span>
+      <nav className="app-nav">
+        <NavLink to="/" className="app-brand">
+          <div className="app-brand-text">
+            <span className="app-brand-name">AI-Spaces-Tryout</span>
+            <span className="app-brand-sub">Discover and run AI spaces</span>
           </div>
         </NavLink>
 
-        <div className="sara-nav-links">
-          <NavLink to="/" end className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
+        <div className="app-nav-links">
+          <NavLink to="/" end className={({ isActive }) => 'app-nav-link' + (isActive ? ' active' : '')}>
             Spaces
           </NavLink>
-          <NavLink to="/history" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
+          <NavLink to="/history" className={({ isActive }) => 'app-nav-link' + (isActive ? ' active' : '')}>
             History
           </NavLink>
         </div>
       </nav>
 
-      <main className="sara-content">
+      <main className="app-content">
         <Outlet />
       </main>
     </>

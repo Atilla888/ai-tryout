@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SARA – Space Detail</title>
+  <title>AI-Spaces-Tryout – Space Detail</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { background: #f6f7fb; min-height: 100vh; color: #1a1a1a; }
 
-    .sara-nav {
+    .app-nav {
       background: #fff;
       border-bottom: 3px solid #f5c030;
       display: flex;
@@ -20,7 +20,7 @@
       top: 0;
       z-index: 100;
     }
-    .sara-brand {
+    .app-brand {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -41,17 +41,17 @@
       object-fit: contain;
       display: block;
     }
-    .sara-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
-    .sara-brand-name { font-size: 18px; font-weight: 800; color: #1a1a1a; }
-    .sara-brand-sub { font-size: 11px; color: #6e7280; letter-spacing: 0.02em; }
+    .app-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+    .app-brand-name { font-size: 18px; font-weight: 800; color: #1a1a1a; }
+    .app-brand-sub { font-size: 11px; color: #6e7280; letter-spacing: 0.02em; }
 
-    .sara-nav-links { display: flex; gap: 28px; margin-left: 36px; font-size: 14px; }
-    .sara-nav-link { color: #525252; text-decoration: none; font-weight: 700; transition: color .15s; }
-    .sara-nav-link:hover,
-    .sara-nav-link.active { color: #1a1a1a; }
+    .app-nav-links { display: flex; gap: 28px; margin-left: 36px; font-size: 14px; }
+    .app-nav-link { color: #525252; text-decoration: none; font-weight: 700; transition: color .15s; }
+    .app-nav-link:hover,
+    .app-nav-link.active { color: #1a1a1a; }
 
-    .sara-nav-right { display: flex; align-items: center; }
-    .sara-signin {
+    .app-nav-right { display: flex; align-items: center; }
+    .app-signin {
       border-radius: 999px;
       border: none;
       background: #f5c030;
@@ -61,9 +61,9 @@
       cursor: pointer;
       transition: background .15s, transform .15s;
     }
-    .sara-signin:hover { background: #e6b52b; transform: translateY(-1px); }
+    .app-signin:hover { background: #e6b52b; transform: translateY(-1px); }
 
-    .sara-content { max-width: 1360px; margin: 0 auto; padding: 28px 24px; }
+    .app-content { max-width: 1360px; margin: 0 auto; padding: 28px 24px; }
     .breadcrumbs { font-size: 12px; color: #777; margin-bottom: 14px; }
     .breadcrumbs span + span::before { content: '›'; margin: 0 8px; color: #bbb; }
 
@@ -131,34 +131,34 @@
   </style>
 </head>
 <body>
-<nav class="sara-nav">
-  <a class="sara-brand" href="dashboard.html">
+<nav class="app-nav">
+  <a class="app-brand" href="dashboard.html">
     <div class="hof-logo">
-      <img src="logo.png" alt="SARA logo" />
+      <img src="logo.png" alt="AI-Spaces-Tryout logo" />
     </div>
-    <div class="sara-brand-text">
-      <span class="sara-brand-name">SARA</span>
-      <span class="sara-brand-sub">System for AI-Research &amp; Assessment</span>
+    <div class="app-brand-text">
+      <span class="app-brand-name">AI-Spaces-Tryout</span>
+      <span class="app-brand-sub">Discover and run AI spaces</span>
     </div>
   </a>
 
-  <div class="sara-nav-links">
-    <a class="sara-nav-link" href="#">Browse</a>
-    <a class="sara-nav-link" href="#">Projects</a>
-    <a class="sara-nav-link" href="#">Datasets</a>
-    <a class="sara-nav-link" href="#">Models</a>
-    <a class="sara-nav-link" href="#">Leaderboards</a>
-    <a class="sara-nav-link" href="#">Evaluations</a>
-    <a class="sara-nav-link active" href="spaces.html">Spaces</a>
-    <a class="sara-nav-link" href="#">Groups</a>
+  <div class="app-nav-links">
+    <a class="app-nav-link" href="#">Browse</a>
+    <a class="app-nav-link" href="#">Projects</a>
+    <a class="app-nav-link" href="#">Datasets</a>
+    <a class="app-nav-link" href="#">Models</a>
+    <a class="app-nav-link" href="#">Leaderboards</a>
+    <a class="app-nav-link" href="#">Evaluations</a>
+    <a class="app-nav-link active" href="spaces.html">Spaces</a>
+    <a class="app-nav-link" href="#">Groups</a>
   </div>
 
-  <div class="sara-nav-right">
-    <button class="sara-signin" onclick="handleAuth()">Sign In</button>
+  <div class="app-nav-right">
+    <button class="app-signin" onclick="handleAuth()">Sign In</button>
   </div>
 </nav>
 
-<div class="sara-content">
+<div class="app-content">
   <div class="breadcrumbs"><span>Hub</span><span>Spaces</span><span id="breadcrumbName">Space name</span></div>
 
   <div class="space-top">

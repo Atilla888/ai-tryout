@@ -8,7 +8,7 @@ from app.schemas.spaces import SpaceCreate, SpaceRead
 from app.services.spaces import create_space_service, get_space_by_id_service, list_spaces_service
 from uuid import UUID
 
-router = APIRouter(prefix="/spaces", tags=["/spaces"])
+router = APIRouter(prefix="/spaces", tags=["spaces"])
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 @router.post("", response_model=SpaceRead, status_code=status.HTTP_201_CREATED)

@@ -44,11 +44,11 @@ function Home() {
   }, [spaces, query, activeFilter])
 
   return (
-    <div className="sara-section-card">
-      <div className="sara-section-header">
-        <span className="sara-section-title">Spaces</span>
+    <div className="app-section-card">
+      <div className="app-section-header">
+        <span className="app-section-title">Spaces</span>
       </div>
-      <div className="sara-hero">
+      <div className="app-hero">
         <p>
           Browse the available AI spaces. Select a space to open the job interface, review input
           options and monitor queue status.
@@ -57,7 +57,7 @@ function Home() {
 
       <div className="search-filter-bar">
         <input
-          className="sara-search"
+          className="app-search"
           type="text"
           placeholder="Search spaces..."
           value={query}

@@ -1,9 +1,3 @@
 # Wireframes
 
-Static HTML prototypes from early UI exploration. The production UI is the React app in `apps/frontend/`.
-
-| File | Screen |
-|------|--------|
-| `spaces.html` | Space hub / landing |
-| `space-detail.html` | Single space input |
-| `dashboard.html` | Dashboard layout |
+Early static HTML mockups (`spaces.html`, `space-detail.html`, `dashboard.html`). They are not wired to the API. The real UI is `apps/frontend`.

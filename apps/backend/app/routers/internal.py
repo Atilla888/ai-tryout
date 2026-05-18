@@ -14,6 +14,7 @@ from app.services.jobs import (
     create_output_artifact_service,
     fail_job_service,
     get_job_by_id_service,
+    start_job_service,
     succeed_job_service,
     update_job_progress_service,
 )
@@ -33,12 +34,17 @@ def _job_or_404(job):
     return job
 
 
+@router.patch("/jobs/{job_id}/start", response_model=JobRead)
+async def patch_job_start(db: db_dependency, job_id: UUID):
+    job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
+    try:
+        return await start_job_service(db, job)
+    except JobTransitionError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
 @router.patch("/jobs/{job_id}/progress", response_model=JobRead)
-async def patch_job_progress(
-    db: db_dependency,
-    job_id: UUID,
-    body: JobProgressUpdate,
-):
+async def patch_job_progress(db: db_dependency, job_id: UUID, body: JobProgressUpdate):
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await update_job_progress_service(
