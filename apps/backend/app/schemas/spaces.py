@@ -1,7 +1,44 @@
-from typing import Any
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel
+
+from app.schemas.common import OrmBase
+
+
+class SpaceListItem(OrmBase):
+    """Lightweight space representation for list/card views."""
+
+    id: UUID
+    name: str
+    slug: str
+    description: str
+    task_type: str
+    input_types: list[str]
+    output_types: list[str]
+    status: str
+    visibility: str
+
+
+class SpaceDetail(OrmBase):
+    """Full space representation including UI and runner config."""
+
+    id: UUID
+    name: str
+    slug: str
+    description: str
+    task_type: str
+    input_types: list[str]
+    output_types: list[str]
+    owner_id: UUID
+    container_image: str
+    ui_config: dict[str, Any]
+    runner_config: dict[str, Any]
+    visibility: str
+    status: str
+    created_at: datetime
+
 
 class SpaceCreate(BaseModel):
     slug: str
@@ -15,6 +52,20 @@ class SpaceCreate(BaseModel):
     runner_config: dict[str, Any]
     visibility: str = "PRIVATE"
     status: str = "DRAFT"
+
+
+class SpaceUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    task_type: str | None = None
+    input_types: list[str] | None = None
+    output_types: list[str] | None = None
+    container_image: str | None = None
+    ui_config: dict[str, Any] | None = None
+    runner_config: dict[str, Any] | None = None
+    visibility: str | None = None
+    status: str | None = None
+
 
 class SpaceRead(BaseModel):
     id: UUID
@@ -32,6 +83,4 @@ class SpaceRead(BaseModel):
     status: str
     owner_id: UUID
 
-    model_config = {
-        "from_attributes": True # enables obj attribute access like space.id, instead of dict like space["id"] 
-    }
+    model_config = {"from_attributes": True}

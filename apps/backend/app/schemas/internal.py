@@ -7,5 +7,5 @@ class JobProgressUpdate(BaseModel):
 
 
 class JobFailUpdate(BaseModel):
-    error_code: str | None = None
+    error_code: str
     error_message: str

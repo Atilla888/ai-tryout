@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 from uuid import UUID
+
 from enum import StrEnum
 from pydantic import BaseModel
 
@@ -11,6 +12,17 @@ class JobStatus(StrEnum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
+
+
+class JobCreate(BaseModel):
+    input_payload: dict[str, Any] = {}
+
+
+class JobSubmitResponse(BaseModel):
+    id: UUID
+    status: JobStatus
+    queue_position: int | None = None
+
 
 class JobRead(BaseModel):
     id: UUID
@@ -28,6 +40,4 @@ class JobRead(BaseModel):
     space_id: UUID
     user_id: UUID
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}

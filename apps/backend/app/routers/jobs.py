@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
 from app.db import get_db
+from app.schemas.artifacts import ArtifactRead
 from app.schemas.jobs import JobRead, JobStatus
+from app.services.artifacts import list_artifacts_by_job_service
 from app.services.jobs import (
     cancel_job_service,
     create_job_service,
@@ -66,6 +68,14 @@ async def get_job(db: db_dependency, job_id: UUID):
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return job
+
+
+@router.get("/jobs/{job_id}/artifacts", response_model=list[ArtifactRead])
+async def list_job_artifacts(db: db_dependency, job_id: UUID):
+    job = await get_job_by_id_service(db=db, job_id=job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    return await list_artifacts_by_job_service(db, job_id)
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=JobRead, status_code=status.HTTP_200_OK)
