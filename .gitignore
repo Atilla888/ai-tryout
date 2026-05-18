@@ -47,8 +47,12 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Claude Code
+# Claude Code / IDE agent settings
 .claude/
+**/.claude/
+
+# Vite cache
+apps/frontend/.vite/
 
 # Docker
 docker-compose.override.yml

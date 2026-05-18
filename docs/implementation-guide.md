@@ -161,87 +161,55 @@ kubectl cluster-info
 ```
 ai-spaces/
 │
-├── frontend/                        # React + Vite + Tailwind application
-│   ├── public/                      # Static assets (favicon, etc.)
-│   ├── src/
-│   │   ├── components/              # Reusable UI components (Button, Card, ProgressBar, FileUpload, etc.)
-│   │   ├── pages/                   # Full-page components
-│   │   │   ├── LandingPage.tsx      # Grid of model cards — click a card to go to that model's page
-│   │   │   └── ModelPage.tsx        # Single page per model: description, file input, generate button, progress indicator, result preview + download (all on one page)
-│   │   ├── services/                # API client functions (talk to backend)
-│   │   │   └── api.ts               # Functions like submitRequest(), getStatus(), getResult()
-│   │   ├── App.tsx                  # Top-level component with routing
-│   │   └── main.tsx                 # Entry point
-│   ├── Dockerfile                   # Builds the frontend for production (Nginx)
-│   ├── nginx.conf                   # Nginx configuration for serving the built frontend
-│   ├── package.json                 # Node.js dependencies and scripts
-│   ├── tsconfig.json                # TypeScript configuration
-│   ├── tailwind.config.js           # Tailwind CSS configuration
-│   └── vite.config.ts               # Vite build tool configuration
-│
-├── backend/                         # FastAPI application
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py                  # FastAPI app creation, startup events, middleware
-│   │   ├── config.py                # Settings: database URL, MinIO credentials, etc.
-│   │   ├── database.py              # SQLAlchemy engine and session setup
-│   │   ├── api/                     # Route handlers (one file per resource)
-│   │   │   ├── __init__.py
-│   │   │   ├── models.py            # GET /api/models — list available AI models
-│   │   │   └── requests.py          # POST /api/requests, GET /api/requests/{id}, etc.
-│   │   ├── db_models/               # SQLAlchemy table definitions
-│   │   │   ├── __init__.py
-│   │   │   ├── model.py             # Model table (name, image, input/output types)
-│   │   │   └── request.py           # Request table (status, progress, file paths)
-│   │   ├── schemas/                 # Pydantic models (data validation for API input/output)
-│   │   │   ├── __init__.py
-│   │   │   ├── model.py             # ModelResponse schema
-│   │   │   └── request.py           # RequestCreate, RequestResponse schemas
-│   │   └── services/                # Business logic
-│   │       ├── __init__.py
-│   │       ├── storage.py           # MinIO upload/download operations
-│   │       └── orchestrator.py      # Start/stop/monitor model containers
-│   ├── tests/                       # pytest test files
-│   │   ├── __init__.py
-│   │   ├── test_requests.py         # Unit tests for request lifecycle
-│   │   └── test_storage.py          # Unit tests for MinIO operations
-│   ├── alembic/                     # Database migration files (for schema changes)
-│   │   └── versions/                # Individual migration scripts
-│   ├── alembic.ini                  # Alembic configuration
-│   ├── Dockerfile                   # Builds the backend for production
-│   └── requirements.txt             # Python dependencies
-│
-├── models/                          # One subfolder per AI model
-│   ├── yolo-v11/                    # Sprint 1: fully implemented, runs on CPU
+├── apps/
+│   ├── frontend/                    # React + TypeScript + Vite SPA
+│   │   ├── public/
+│   │   ├── src/
+│   │   │   ├── api/                 # Typed REST client
+│   │   │   ├── components/
+│   │   │   └── pages/               # Home, Spaces, JobDetail, History
+│   │   ├── package.json
+│   │   └── vite.config.ts
+│   ├── backend-api/                 # FastAPI REST API
+│   │   ├── main.py                  # Application entry point
+│   │   ├── app/
+│   │   │   ├── core/                # config, database session
+│   │   │   ├── routers/             # spaces, jobs, artifacts, internal, …
+│   │   │   ├── models.py            # SQLAlchemy ORM (single source of truth)
+│   │   │   └── schemas.py           # Pydantic request/response models
+│   │   ├── alembic/                 # Database migrations
+│   │   ├── tests/
 │   │   ├── Dockerfile
-│   │   ├── inference.py             # Downloads input from MinIO, runs YOLO, uploads result
-│   │   └── requirements.txt         # ultralytics, boto3
-│   ├── ltx-video/                   # Sprint 2: video generation via cloud GPU API
-│   │   ├── Dockerfile
-│   │   ├── inference.py             # Calls cloud GPU API (e.g., Replicate), uploads result to MinIO
-│   │   └── requirements.txt         # replicate (or huggingface_hub), boto3
-│   └── sam-3d/                      # Sprint 2: 3D object generation via cloud GPU API
-│       ├── Dockerfile
-│       ├── inference.py             # Calls cloud GPU API, uploads GLTF result to MinIO
-│       └── requirements.txt         # replicate (or huggingface_hub), boto3
+│   │   └── requirements.txt
+│   └── orchestrator/                # Polls queue, spawns runners / K8s Jobs
 │
-├── k8s/                             # Kubernetes manifests (used from day one)
-│   ├── namespace.yaml               # Kubernetes namespace for the project
-│   ├── model-job-template.yaml      # Template for on-demand model execution Jobs
-│   ├── backend-deployment.yaml      # Backend deployment and service (for full K8s deployment)
-│   ├── frontend-deployment.yaml     # Frontend deployment and service
-│   ├── postgres-deployment.yaml     # PostgreSQL deployment with persistent volume
-│   └── minio-deployment.yaml        # MinIO deployment with persistent volume
+├── models/                          # One folder per AI space runner
+│   ├── common-runner-template/      # Reference contract + fake runner
+│   ├── object-detection-space/      # e.g. YOLO
+│   ├── audio-space/
+│   └── video-or-3d-space/
 │
-├── docs/                            # Project documentation
-│   ├── requirements.md              # Requirements specification
-│   └── implementation-guide.md      # This file
+├── infra/
+│   ├── docker/                      # Compose helpers, pgAdmin config
+│   ├── k8s/                         # All Kubernetes manifests (not a second k8s/ at repo root)
+│   │   └── storage/                 # NFS PersistentVolume / PVC
+│   └── scripts/                     # Seed, cleanup, local dev utilities
 │
-├── docker-compose.yml               # Starts all services locally with one command
-├── .env.example                     # Example environment variables (copy to .env)
-├── .gitignore                       # Files and folders git should ignore
-└── README.md                        # Quick start instructions
+├── tests/
+│   └── e2e/                         # Playwright (or similar) end-to-end tests
+│
+├── docs/
+│   ├── deployment.md
+│   ├── implementation-guide.md      # This file
+│   └── wireframes/                  # Early static HTML prototypes
+│
+├── docker-compose.yml
+├── .env.example
+├── .gitlab-ci.yml
+└── README.md
 ```
+
+**Do not create** duplicate top-level `frontend/`, `backend/`, or `k8s/` folders — everything lives under `apps/` and `infra/` as above.
 
 ---
 
