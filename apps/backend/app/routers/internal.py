@@ -88,10 +88,7 @@ async def post_job_artifact(
 ):
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File is required",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is required")
     return await create_output_artifact_service(
         db,
         job,

@@ -28,10 +28,7 @@ STUB_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 async def create_job(request: Request, db: db_dependency, space_id: UUID):
     form = await request.form()
     if not form:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Job input is required",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job input is required")
 
     space = await get_space_by_id_service(db=db, space_id=space_id)
     if space is None:
@@ -48,10 +45,7 @@ async def create_job(request: Request, db: db_dependency, space_id: UUID):
             input_payload[key] = str(value)
 
     if not input_payload and not files:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Job input is required",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job input is required")
 
     return await create_job_service(
         db=db,
@@ -89,10 +83,7 @@ async def cancel_job(db: db_dependency, job_id: UUID):
         JobStatus.COMPLETED.value,
         JobStatus.FAILED.value,
     }:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Cannot cancel job with status {job.status}",
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Cannot cancel job with status {job.status}")
 
     try:
         return await cancel_job_service(db=db, job=job)
