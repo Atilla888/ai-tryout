@@ -7,8 +7,8 @@ function Layout() {
       <nav className="app-nav">
         <NavLink to="/" className="app-brand">
           <div className="app-brand-text">
-            <span className="app-brand-name">AI-Spaces-Tryout</span>
-            <span className="app-brand-sub">Discover and run AI spaces</span>
+            <span className="app-brand-name">SARA</span>
+            <span className="app-brand-sub">System for AI-Research &amp; Assessment</span>
           </div>
         </NavLink>
 

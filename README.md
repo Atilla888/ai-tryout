@@ -131,7 +131,7 @@ Copy the `id` from the response — that is your space id.
 Submit a job (replace the uuid in the URL):
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/spaces/SPACE_ID/jobs" -F "prompt=hello test"
+curl.exe -X POST "http://127.0.0.1:8000/spaces/SPACE_ID/jobs" -F "prompt=hello test" 
 ```
 
 The `-F` part is required. Without it you get `Job input is required`. Copy the job `id` from the response. Status should be `QUEUED`. Within a few seconds the orchestrator should pick it up.
