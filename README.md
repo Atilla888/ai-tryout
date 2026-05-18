@@ -37,7 +37,8 @@ Inspired by [Hugging Face Spaces](https://huggingface.co/spaces), this platform 
 │   └── scripts/            # Helper scripts (seed data, cleanup, deploy)
 ├── tests/
 │   └── e2e/                # End-to-end tests (Playwright or similar)
-├── docs/                   # Project documentation
+├── docs/                   # Project documentation (see docs/README.md)
+│   └── wireframes/         # Early static HTML prototypes
 ├── .env.example            # All required environment variables (no secrets)
 ├── .gitlab-ci.yml          # CI pipeline (lint)
 └── docker-compose.yml      # Local development stack
