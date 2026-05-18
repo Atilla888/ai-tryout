@@ -2,7 +2,7 @@ from datetime import datetime
 from app.db import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Boolean, ForeignKey, Integer, String, DateTime, Uuid, func
+from sqlalchemy import Boolean, ForeignKey, Integer, String, DateTime, Uuid, UniqueConstraint, func
 import uuid
 from typing import Any
 
@@ -21,9 +21,10 @@ class User(Base):
 
 class Space(Base):
     __tablename__ = "spaces"
+    __table_args__ = (UniqueConstraint("owner_id", "slug", name="uq_spaces_owner_slug"),)
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid7)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(1000), nullable=False)
     task_type: Mapped[str] = mapped_column(String(100), nullable=False)
