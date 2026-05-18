@@ -41,13 +41,15 @@ def configure_test_settings(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "internal_service_token", TEST_SERVICE_TOKEN)
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def engine():
     _prepare_sqlite_schema()
     test_engine = create_async_engine(settings.database_url, echo=False)
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield test_engine
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
     await test_engine.dispose()
 
 

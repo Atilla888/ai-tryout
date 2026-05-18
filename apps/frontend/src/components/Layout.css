@@ -1,4 +1,4 @@
-.sara-nav {
+.app-nav {
   background: #fff;
   border-bottom: 3px solid #f5c030;
   display: flex;
@@ -11,50 +11,50 @@
   z-index: 100;
 }
 
-.sara-brand {
+.app-brand {
   display: flex;
   align-items: center;
   gap: 12px;
   text-decoration: none;
 }
 
-.sara-brand-text {
+.app-brand-text {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
 }
 
-.sara-brand-name {
+.app-brand-name {
   font-size: 18px;
   font-weight: 800;
   color: #1a1a1a;
 }
 
-.sara-brand-sub {
+.app-brand-sub {
   font-size: 11px;
   color: #6e7280;
   letter-spacing: 0.02em;
 }
 
-.sara-nav-links {
+.app-nav-links {
   display: flex;
   gap: 28px;
   font-size: 14px;
 }
 
-.sara-nav-link {
+.app-nav-link {
   color: #525252;
   text-decoration: none;
   font-weight: 700;
   transition: color 0.15s;
 }
 
-.sara-nav-link:hover,
-.sara-nav-link.active {
+.app-nav-link:hover,
+.app-nav-link.active {
   color: #1a1a1a;
 }
 
-.sara-content {
+.app-content {
   max-width: 1360px;
   width: 100%;
   margin: 0 auto;

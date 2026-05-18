@@ -2,7 +2,16 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export type SpaceVisibility = 'public' | 'private'
 export type SpaceStatus = 'draft' | 'published' | 'disabled'
-export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+
+export type JobStatus =
+  | 'QUEUED'
+  | 'STARTING'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLING'
+  | 'CANCELLED'
+  | 'EXPIRED'
 
 export interface Space {
   id: string
@@ -49,14 +58,15 @@ export interface SpaceDetail extends Space {
 export interface Job {
   id: string
   space_id: string
-  user_id: string | null
+  user_id: string
   status: JobStatus
   queue_position: number | null
-  progress_percent: number | null
+  progress_percent: number
   progress_message: string | null
   created_at: string
   started_at: string | null
   finished_at: string | null
+  cancelled_at: string | null
   expires_at: string | null
   error_code: string | null
   error_message: string | null
@@ -66,6 +76,27 @@ export interface JobSubmitResponse {
   id: string
   status: JobStatus
   queue_position: number | null
+}
+
+export interface Artifact {
+  id: string
+  artifact_type: string
+  file_name: string
+  content_type: string
+  size_bytes: number
+  storage_path: string
+  preview_supported: boolean
+  created_at: string
+  expires_at: string | null
+  job_id: string
+}
+
+export function artifactPreviewUrl(artifactId: string): string {
+  return `${BASE_URL}/artifacts/${artifactId}/preview`
+}
+
+export function artifactDownloadUrl(artifactId: string): string {
+  return `${BASE_URL}/artifacts/${artifactId}/download`
 }
 
 export async function fetchSpaces(): Promise<Space[]> {
@@ -90,5 +121,18 @@ export async function submitJob(spaceId: string, payload: FormData): Promise<Job
 
 export async function fetchJob(jobId: string): Promise<Job> {
   const res = await fetch(`${BASE_URL}/jobs/${jobId}`)
+  if (!res.ok) throw new Error(`Failed to fetch job: ${res.status}`)
   return res.json() as Promise<Job>
+}
+
+export async function cancelJob(jobId: string): Promise<Job> {
+  const res = await fetch(`${BASE_URL}/jobs/${jobId}/cancel`, { method: 'POST' })
+  if (!res.ok) throw new Error(`Cancel failed: ${res.status}`)
+  return res.json() as Promise<Job>
+}
+
+export async function fetchJobArtifacts(jobId: string): Promise<Artifact[]> {
+  const res = await fetch(`${BASE_URL}/jobs/${jobId}/artifacts`)
+  if (!res.ok) throw new Error(`Failed to fetch artifacts: ${res.status}`)
+  return res.json() as Promise<Artifact[]>
 }

@@ -43,6 +43,7 @@ class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid7)
     status: Mapped[str] = mapped_column(String(100), nullable=False, default="QUEUED")
+    queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     progress_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     progress_message: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)

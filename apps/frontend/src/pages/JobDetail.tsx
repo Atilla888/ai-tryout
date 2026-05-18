@@ -1,8 +1,217 @@
-import { useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import {
+  artifactDownloadUrl,
+  artifactPreviewUrl,
+  cancelJob,
+  fetchJob,
+  fetchJobArtifacts,
+  type Artifact,
+  type Job,
+} from '../api/api'
+import './JobDetail.css'
+
+const POLL_MS = 2000
+
+function jobIsFinished(status: string) {
+  return (
+    status === 'SUCCEEDED' ||
+    status === 'FAILED' ||
+    status === 'CANCELLED' ||
+    status === 'EXPIRED'
+  )
+}
+
+function getMessage(job: Job) {
+  if (job.status === 'QUEUED' && job.queue_position != null) {
+    return `Position ${job.queue_position} in queue`
+  }
+  if (job.status === 'STARTING') {
+    return 'Starting your job...'
+  }
+  if (job.status === 'RUNNING') {
+    return job.progress_message || 'Processing...'
+  }
+  if (job.status === 'SUCCEEDED') {
+    return 'Your result is ready'
+  }
+  if (job.status === 'FAILED') {
+    return job.error_message || 'Job failed'
+  }
+  if (job.status === 'CANCELLED') {
+    return 'Job was cancelled'
+  }
+  if (job.status === 'CANCELLING') {
+    return 'Cancelling...'
+  }
+  if (job.status === 'EXPIRED') {
+    return 'Job expired'
+  }
+  return job.status
+}
 
 function JobDetail() {
   const { jobId } = useParams()
-  return <h1>Job: {jobId}</h1>
+  const [job, setJob] = useState<Job | null>(null)
+  const [artifacts, setArtifacts] = useState<Artifact[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const prevStatusRef = useRef('')
+
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!jobId) return
+
+    let timer: ReturnType<typeof setInterval> | undefined
+
+    async function update() {
+      try {
+        const data = await fetchJob(jobId)
+        setJob(data)
+        setError('')
+
+        if (prevStatusRef.current && prevStatusRef.current !== data.status) {
+          if (data.status === 'SUCCEEDED' && Notification.permission === 'granted') {
+            new Notification('Job complete', { body: 'Your result is ready.' })
+          }
+          if (data.status === 'FAILED' && Notification.permission === 'granted') {
+            new Notification('Job failed', { body: data.error_message || 'Job failed' })
+          }
+        }
+        prevStatusRef.current = data.status
+
+        if (data.status === 'SUCCEEDED') {
+          const list = await fetchJobArtifacts(jobId)
+          const outputs = list.filter(
+            (a) => a.preview_supported && a.artifact_type !== 'INPUT',
+          )
+          setArtifacts(outputs)
+        }
+
+        if (jobIsFinished(data.status) && timer) {
+          clearInterval(timer)
+        }
+      } catch {
+        setError('Failed to load job')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    update()
+    timer = setInterval(update, POLL_MS)
+
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [jobId])
+
+  async function handleCancel() {
+    if (!jobId) return
+    try {
+      const updated = await cancelJob(jobId)
+      setJob(updated)
+    } catch {
+      alert('Could not cancel job')
+    }
+  }
+
+  if (!jobId) {
+    return <p>Missing job id</p>
+  }
+
+  if (loading && !job) {
+    return <p>Loading...</p>
+  }
+
+  if (error && !job) {
+    return <p>{error}</p>
+  }
+
+  if (!job) {
+    return <p>Job not found</p>
+  }
+
+  const canCancel = job.status === 'QUEUED' || job.status === 'RUNNING'
+
+  return (
+    <div className="job-page">
+      <p>
+        <Link to="/">Back to spaces</Link>
+      </p>
+
+      <h1>Job status</h1>
+      <p>
+        <strong>Status:</strong> {job.status}
+      </p>
+      <p>{getMessage(job)}</p>
+
+      {job.status === 'QUEUED' && job.queue_position != null && (
+        <p>Queue position: {job.queue_position}</p>
+      )}
+
+      {job.status === 'RUNNING' && (
+        <div>
+          <p>Progress: {job.progress_percent}%</p>
+          <progress value={job.progress_percent} max={100} />
+          {job.progress_message && <p>{job.progress_message}</p>}
+        </div>
+      )}
+
+      {job.status === 'FAILED' && (
+        <p className="error-text">
+          {job.error_message}
+          {job.error_code && ` (${job.error_code})`}
+        </p>
+      )}
+
+      {canCancel && (
+        <button type="button" onClick={handleCancel}>
+          Cancel job
+        </button>
+      )}
+
+      <p className="small-text">Job id: {job.id}</p>
+
+      {job.status === 'SUCCEEDED' && (
+        <div className="results">
+          <h2>Results</h2>
+          {artifacts.length === 0 && <p>No files to show yet.</p>}
+          {artifacts.map((artifact) => (
+            <div key={artifact.id} className="result-item">
+              <p>{artifact.file_name}</p>
+              <p>
+                <a href={artifactDownloadUrl(artifact.id)}>Download</a>
+              </p>
+              {artifact.preview_supported && (
+                <div>
+                  {artifact.content_type.startsWith('image/') ? (
+                    <img
+                      src={artifactPreviewUrl(artifact.id)}
+                      alt={artifact.file_name}
+                      width={400}
+                    />
+                  ) : (
+                    <iframe
+                      src={artifactPreviewUrl(artifact.id)}
+                      title={artifact.file_name}
+                      width="100%"
+                      height={200}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default JobDetail
