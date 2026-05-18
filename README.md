@@ -1,102 +1,47 @@
 # AI-Spaces-Tryout
 
-> A Hof University platform where users can browse AI spaces, submit input through browser UIs, run AI model containers on demand in Kubernetes, track progress, preview results, and download generated files.
+A project inspired by [Hugging Face Spaces](https://huggingface.co/spaces): a place where people can discover AI “spaces”, submit inputs through a web UI, run model workloads, follow job progress, and collect results.
 
-Inspired by [Hugging Face Spaces](https://huggingface.co/spaces), this platform is scoped and adapted for Hof University infrastructure.
+## What you can do with it
 
----
+Someone opens the platform, picks a space, and fills in a form driven by that space’s configuration. The backend records an asynchronous job and exposes status (including queue position when relevant). An orchestrator is meant to start the right model workload in Kubernetes; the runner reports progress back to the API. When a job finishes, the user can preview output in the browser, download artifacts, and look back at recent history.
 
-## What It Does
+## Getting started locally
 
-1. A user opens the platform and sees available AI spaces (model cards).
-2. The user selects a space and fills in an input form rendered from configuration.
-3. The platform creates an asynchronous job and shows queue position.
-4. The orchestrator picks the job and starts a model container in Kubernetes.
-5. The model reports progress back to the backend.
-6. On completion the user previews the result in the browser, downloads the output, and receives a browser notification.
-7. The user can revisit their private job history for up to 14 days.
+You need Docker with Compose, Git, and—for working on the apps directly—Node.js 20+ and Python 3.14+.
 
----
-
-## Repository Layout
-
-```
-.
-├── apps/
-│   ├── frontend/           # React + TypeScript + Vite SPA
-│   ├── backend-api/        # FastAPI REST backend
-│   └── orchestrator/       # Job orchestrator service (Kubernetes-aware)
-├── models/
-│   ├── common-runner-template/   # Reference model runner contract & template
-│   ├── object-detection-space/   # YOLO-based object detection model runner
-│   ├── audio-space/              # Audio model runner (speech-to-text / TTS)
-│   └── video-or-3d-space/        # Video / 3D generation model runner
-├── infra/
-│   ├── docker/             # Shared Dockerfile snippets / base images
-│   ├── k8s/                # Kubernetes manifests (Jobs, Deployments, Services)
-│   └── scripts/            # Helper scripts (seed data, cleanup, deploy)
-├── tests/
-│   └── e2e/                # End-to-end tests (Playwright or similar)
-├── docs/                   # Project documentation (see docs/README.md)
-│   └── wireframes/         # Early static HTML prototypes
-├── .env.example            # All required environment variables (no secrets)
-├── .gitlab-ci.yml          # CI pipeline (lint)
-└── docker-compose.yml      # Local development stack
-```
-
----
-
-## Quick Start (Local Development)
-
-### Prerequisites
-
-| Tool | Minimum Version |
-|------|----------------|
-| Docker + Docker Compose | Docker 24+ |
-| Node.js | 20 LTS |
-| Python | 3.11+ |
-| Git | any recent |
-
-### 1. Clone the repository
+Clone the repository and copy the example environment file:
 
 ```bash
 git clone https://gitlab.hof-university.de/atilla888/ai-spaces.git
 cd ai-spaces
-```
-
-### 2. Configure environment variables
-
-```bash
 cp .env.example .env
-# Edit .env only if you need non-default ports or credentials
 ```
 
-**Never commit the `.env` file.** It is listed in `.gitignore`.
+Copy `.env.example` to `.env` before the first `docker compose up` if you want custom secrets; Compose also works without `.env` using the defaults in `docker-compose.yml`.
 
-### 3. Start the full stack
+Start PostgreSQL and the API with Docker:
 
 ```bash
 docker compose up --build
 ```
 
-| Service | URL |
-|---------|-----|
-| Frontend (dev server) | http://localhost:5173 |
-| Backend API | http://localhost:8000 |
-| Backend Swagger docs | http://localhost:8000/docs |
-| PostgreSQL | localhost:5432 |
+With the default setup you get the API at [http://localhost:8000](http://localhost:8000) (OpenAPI docs at `/docs`) and PostgreSQL on port 5432.
 
-### 4. Run the backend in isolation (no Docker)
+### Running the backend without Docker
 
 ```bash
-cd apps/backend-api
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+cd apps/backend
+python3.14 -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
-### 5. Run the frontend in isolation (no Docker)
+Apply database migrations with Alembic when you need a fresh schema (`alembic upgrade head` from `apps/backend`).
+
+### Running the frontend without Docker
 
 ```bash
 cd apps/frontend
@@ -104,79 +49,29 @@ npm install
 npm run dev
 ```
 
----
+The Vite dev server usually serves the UI at [http://localhost:5173](http://localhost:5173). Point `VITE_API_URL` in `.env` at your backend if it is not on `http://localhost:8000`.
 
-## Running Tests
+## Tests and lint
 
-### Backend unit tests
-
-```bash
-cd apps/backend-api
-pytest tests/unit/
-```
-
-### Backend integration tests
+Backend integration tests (artifact upload, preview, download, list):
 
 ```bash
-pytest tests/integration/
+cd apps/backend
+pip install -r requirements.txt
+pytest tests/ -v
 ```
 
-### End-to-end tests
+From `apps/frontend`, run `npm run lint` when working on the UI.
 
-```bash
-cd tests/e2e
-npm install
-npx playwright test
-```
+## How the pieces fit together
 
-### Lint
+The browser talks to the FastAPI backend, which persists jobs and metadata in PostgreSQL. A separate orchestrator service will claim queued work and start model runners on Kubernetes. Runners call internal API endpoints to update progress and register artifacts; files land in configured storage. 
 
-```bash
-# Python
-cd apps/backend-api && ruff check .
+## Configuration
 
-# TypeScript / Frontend
-cd apps/frontend && npm run lint
-```
-
----
-
-## Architecture
-
-**High-level flow:**
-
-```
-Browser → Backend API → PostgreSQL (job queue)
-                      ↓
-              Orchestrator Service
-                      ↓
-             Kubernetes Cluster
-                      ↓
-           Model Runner Container
-                      ↓
-       Backend API + Persistent Storage
-```
-
----
-
-## Environment Variables
-
-All variables are documented in [`.env.example`](.env.example). Required variables:
-
-| Variable | Description |
-|----------|-------------|
-| `POSTGRES_USER` | Database user |
-| `POSTGRES_PASSWORD` | Database password (use a strong value in production) |
-| `POSTGRES_DB` | Database name |
-| `DATABASE_URL` | Full SQLAlchemy async connection string |
-| `SECRET_KEY` | Backend secret key for token signing |
-| `STORAGE_PATH` | Filesystem path where artifacts are persisted |
-| `VITE_API_BASE_URL` | Backend API base URL used by the frontend |
-
-
----
+See [`.env.example`](.env.example) for database URLs, `SECRET_KEY`, `ARTIFACT_STORAGE_ROOT`, `INTERNAL_SERVICE_TOKEN`, and `VITE_API_URL`. Docker Compose overrides database hostnames to `postgres` inside containers; keep `localhost` in `.env` when running the API on your machine. Use strong secrets outside local development.
 
 ## Team
 
-Hof University of Applied Sciences — Interdisciplinary Software Development Project  
-Course topic: Hugging Face Spaces for Hof University / AI-Spaces-Tryout
+Hof University of Applied Sciences —> Interdisciplinary Software Development  
+Course project: AI Spaces tryout for Hof University

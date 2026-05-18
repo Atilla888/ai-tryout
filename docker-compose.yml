@@ -1,17 +1,20 @@
-version: "3.9"
-
 services:
   postgres:
     image: docker.io/library/postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: aispacesuser
-      POSTGRES_PASSWORD: aispacespass
-      POSTGRES_DB: aispaces
+      POSTGRES_USER: ${POSTGRES_USER:-aispacesuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aispacespass}
+      POSTGRES_DB: ${POSTGRES_DB:-aispaces}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     image: localhost/ai-spaces-tryout_backend:latest
@@ -19,10 +22,22 @@ services:
       context: ./apps/backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+      ALEMBIC_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+      ARTIFACT_STORAGE_ROOT: /app/storage
+      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-changeme-internal-token}
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ./apps/backend-api:/app
+      - ./apps/backend:/app
       - storage_data:/app/storage
 
 volumes:
