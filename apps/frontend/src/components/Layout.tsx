@@ -1,28 +1,57 @@
 import { Outlet, NavLink } from 'react-router-dom'
+import { useAuth } from 'react-oidc-context'
 import './Layout.css'
+
+function AuthControls() {
+  const auth = useAuth()
+
+  if (auth.isLoading) return <span className="sara-nav-link">…</span>
+
+  if (auth.isAuthenticated) {
+    const name = auth.user?.profile.preferred_username ?? auth.user?.profile.email ?? 'account'
+    return (
+      <>
+        <span className="sara-nav-link">{name}</span>
+        <button
+          className="sara-nav-link"
+          onClick={() => void auth.signoutRedirect()}
+        >
+          Sign out
+        </button>
+      </>
+    )
+  }
+
+  return (
+    <button className="sara-nav-link" onClick={() => void auth.signinRedirect()}>
+      Sign in
+    </button>
+  )
+}
 
 function Layout() {
   return (
     <>
-      <nav className="app-nav">
-        <NavLink to="/" className="app-brand">
-          <div className="app-brand-text">
-            <span className="app-brand-name">SARA</span>
-            <span className="app-brand-sub">System for AI-Research &amp; Assessment</span>
+      <nav className="sara-nav">
+        <NavLink to="/" className="sara-brand">
+          <div className="sara-brand-text">
+            <span className="sara-brand-name">SARA</span>
+            <span className="sara-brand-sub">System for AI-Research &amp; Assessment</span>
           </div>
         </NavLink>
 
-        <div className="app-nav-links">
-          <NavLink to="/" end className={({ isActive }) => 'app-nav-link' + (isActive ? ' active' : '')}>
+        <div className="sara-nav-links">
+          <NavLink to="/" end className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
             Spaces
           </NavLink>
-          <NavLink to="/history" className={({ isActive }) => 'app-nav-link' + (isActive ? ' active' : '')}>
+          <NavLink to="/history" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
             History
           </NavLink>
+          <AuthControls />
         </div>
       </nav>
 
-      <main className="app-content">
+      <main className="sara-content">
         <Outlet />
       </main>
     </>
