@@ -16,6 +16,18 @@ services:
       timeout: 5s
       retries: 5
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+
   backend:
     image: localhost/ai-spaces-tryout_backend:latest
     build:
@@ -31,9 +43,14 @@ services:
       ARTIFACT_STORAGE_ROOT: /app/storage
       SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-changeme-internal-token}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-oidc}
+      OIDC_ISSUER: ${OIDC_ISSUER:-http://keycloak:8080/realms/ai-spaces}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-ai-spaces-frontend}
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
