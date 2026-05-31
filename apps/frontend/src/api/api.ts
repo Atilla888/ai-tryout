@@ -1,5 +1,13 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+let accessToken: string | null = null
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+function authHeaders(): Record<string, string> {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+}
+
 export type SpaceVisibility = 'public' | 'private'
 export type SpaceStatus = 'draft' | 'published' | 'disabled'
 
@@ -91,6 +99,16 @@ export interface Artifact {
   job_id: string
 }
 
+export interface Me {
+  id: string
+  subject_id: string
+  idp: string
+  email: string
+  display_name: string | null
+  role: string
+  created_at: string
+}
+
 export function artifactPreviewUrl(artifactId: string): string {
   return `${BASE_URL}/artifacts/${artifactId}/preview`
 }
@@ -113,6 +131,7 @@ export async function fetchSpace(id: string): Promise<SpaceDetail> {
 export async function submitJob(spaceId: string, payload: FormData): Promise<JobSubmitResponse> {
   const res = await fetch(`${BASE_URL}/spaces/${spaceId}/jobs`, {
     method: 'POST',
+    headers: authHeaders(),
     body: payload,
   })
   if (!res.ok) throw new Error(`Submit failed: ${res.status}`)
@@ -126,9 +145,24 @@ export async function fetchJob(jobId: string): Promise<Job> {
 }
 
 export async function cancelJob(jobId: string): Promise<Job> {
-  const res = await fetch(`${BASE_URL}/jobs/${jobId}/cancel`, { method: 'POST' })
+  const res = await fetch(`${BASE_URL}/jobs/${jobId}/cancel`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
   if (!res.ok) throw new Error(`Cancel failed: ${res.status}`)
   return res.json() as Promise<Job>
+}
+
+export async function fetchMe(): Promise<Me> {
+  const res = await fetch(`${BASE_URL}/me`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`)
+  return res.json() as Promise<Me>
+}
+
+export async function fetchMyHistory(): Promise<Job[]> {
+  const res = await fetch(`${BASE_URL}/me/history`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`)
+  return res.json() as Promise<Job[]>
 }
 
 export async function fetchJobArtifacts(jobId: string): Promise<Artifact[]> {
