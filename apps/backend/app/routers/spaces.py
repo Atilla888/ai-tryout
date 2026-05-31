@@ -4,19 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
+from app.deps.auth import require_role
+from app.models import User
 from app.schemas.spaces import SpaceCreate, SpaceRead
 from app.services.spaces import create_space_service, get_space_by_id_service, list_spaces_service
 from uuid import UUID
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
+CreatorUser = Annotated[User, Depends(require_role("space_creator", "admin"))]
 
 @router.post("", response_model=SpaceRead, status_code=status.HTTP_201_CREATED)
-async def create_space(db: db_dependency, data: SpaceCreate):
-    # for now fake id, later may come from get_current_user().id after Keycloak or Shibboleth auth
-    owner_id = UUID("00000000-0000-0000-0000-000000000001")
+async def create_space(db: db_dependency, data: SpaceCreate, creator: CreatorUser):
     try:
-        return await create_space_service(db=db, data=data, owner_id=owner_id)
+        return await create_space_service(db=db, data=data, owner_id=creator.id)
     except IntegrityError: #db rejected insert
         await db.rollback() #clean failed transaction
 

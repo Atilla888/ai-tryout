@@ -17,7 +17,7 @@ OPENAPI_TAGS = [
     {"name": "jobs", "description": "Submit jobs, poll status, cancel, list artifacts"},
     {"name": "artifacts", "description": "Preview and download job output files"},
     {"name": "internal", "description": "Runner/orchestrator callbacks (requires service token)"},
-    {"name": "me", "description": "Current user profile and history (stubs)"},
+    {"name": "me", "description": "Current user profile and job history"},
     {"name": "admin", "description": "Administration (stubs)"},
     {"name": "creator", "description": "Space creator and manager (stubs)"},
 ]
