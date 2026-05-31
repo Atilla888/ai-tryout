@@ -1,24 +1,16 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
-
-from app.schemas.common import OrmBase
+from pydantic import BaseModel
 
 
-class UserRead(OrmBase):
+class UserRead(BaseModel):
     id: UUID
     subject_id: str
     idp: str
-    email: EmailStr
+    email: str
     display_name: str | None
     role: str
     created_at: datetime
 
-
-class UserCreate(BaseModel):
-    subject_id: str
-    idp: str
-    email: EmailStr
-    display_name: str | None = None
-    role: str = "user"
+    model_config = {"from_attributes": True}

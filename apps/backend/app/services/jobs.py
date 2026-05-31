@@ -97,6 +97,13 @@ async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> li
     return list(result.scalars().all())
 
 
+async def list_jobs_by_user_service(db: AsyncSession, user_id: UUID) -> list[Job]:
+    result = await db.execute(
+        select(Job).where(Job.user_id == user_id).order_by(Job.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 async def start_job_service(db: AsyncSession, job: Job) -> Job:
     ensure_transition(job.status, JobStatus.STARTING)
     job.status = JobStatus.STARTING.value

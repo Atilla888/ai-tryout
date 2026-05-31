@@ -26,4 +26,14 @@ class Settings(BaseSettings):
     )
     internal_service_token: str = ""
 
+    # Authentication: "dev" (fixed local user) or "oidc" (Keycloak JWT validation)
+    auth_provider: str = "dev"
+    oidc_issuer: str = "http://localhost:8080/realms/ai-spaces"
+    oidc_audience: str = "ai-spaces-frontend"
+    oidc_verify_audience: bool = True
+
+    @property
+    def oidc_jwks_url(self) -> str:
+        return f"{self.oidc_issuer.rstrip('/')}/protocol/openid-connect/certs"
+
 settings = Settings()

@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
 from app.db import get_db
+from app.deps.auth import CurrentUser
+from app.models import User
 from app.schemas.artifacts import ArtifactRead
 from app.schemas.jobs import JobRead, JobStatus, JobSubmitResponse, TERMINAL_JOB_STATUSES
 from app.services.artifacts import list_artifacts_by_job_service
@@ -22,11 +24,14 @@ router = APIRouter(tags=["jobs"])
 
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
-STUB_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+
+def _ensure_owner_or_admin(job, user: User) -> None:
+    if job.user_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your job")
 
 
 @router.post("/spaces/{space_id}/jobs", response_model=JobSubmitResponse, status_code=status.HTTP_201_CREATED)
-async def create_job(request: Request, db: db_dependency, space_id: UUID):
+async def create_job(request: Request, db: db_dependency, space_id: UUID, user: CurrentUser):
     form = await request.form()
     if not form:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job input is required")
@@ -51,7 +56,7 @@ async def create_job(request: Request, db: db_dependency, space_id: UUID):
     return await create_job_service(
         db=db,
         space_id=space_id,
-        user_id=STUB_USER_ID,
+        user_id=user.id,
         input_payload=input_payload,
         files=files,
     )
@@ -79,10 +84,12 @@ async def list_job_artifacts(db: db_dependency, job_id: UUID):
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=JobRead, status_code=status.HTTP_200_OK)
-async def cancel_job(db: db_dependency, job_id: UUID):
+async def cancel_job(db: db_dependency, job_id: UUID, user: CurrentUser):
     job = await get_job_by_id_service(db=db, job_id=job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    _ensure_owner_or_admin(job, user)
 
     try:
         current_status = JobStatus(job.status)
