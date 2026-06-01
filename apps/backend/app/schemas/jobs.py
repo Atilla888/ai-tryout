@@ -51,6 +51,7 @@ class JobRead(BaseModel):
     cancelled_at: datetime | None = None
     expires_at: datetime | None
     space_id: UUID
+    space_name: str | None = None
     user_id: UUID
 
     model_config = {"from_attributes": True}
