@@ -4,7 +4,8 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Monorepo root (ai-spaces/) — .env lives next to docker-compose.yml
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_file = Path(__file__).resolve()
+_REPO_ROOT = _file.parents[3] if len(_file.parents) > 3 else _file.parent
 _BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 

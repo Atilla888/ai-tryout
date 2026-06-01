@@ -2,9 +2,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Artifact, Job
 from app.schemas.jobs import JobStatus, JobSubmitResponse
@@ -99,7 +100,7 @@ async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> li
 
 async def list_jobs_by_user_service(db: AsyncSession, user_id: UUID) -> list[Job]:
     result = await db.execute(
-        select(Job).where(Job.user_id == user_id).order_by(Job.created_at.desc())
+        select(Job).options(selectinload(Job.space)).where(Job.user_id == user_id).order_by(Job.created_at.desc())
     )
     return list(result.scalars().all())
 
@@ -221,3 +222,26 @@ async def create_output_artifact_service(
     await db.commit()
     await db.refresh(artifact)
     return artifact
+
+async def delete_job_from_history_service(
+    db: AsyncSession,
+    job_id: UUID,
+    user_id: UUID,
+) -> None:
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not allowed to delete this job")
+
+    # Delete associated artifacts
+    artifacts_result = await db.execute(select(Artifact).where(Artifact.job_id == job_id))
+    artifacts = artifacts_result.scalars().all()
+    for artifact in artifacts:
+        await db.delete(artifact)
+
+    await db.delete(job)
+    await db.commit()
