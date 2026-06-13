@@ -42,13 +42,3 @@
   border-top: 1px solid #ccc;
   padding-top: 16px;
 }
-
-.result-item {
-  margin-bottom: 20px;
-  padding: 12px;
-  border: 1px solid #ddd;
-}
-
-.result-item img {
-  max-width: 100%;
-}
