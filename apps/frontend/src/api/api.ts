@@ -170,3 +170,12 @@ export async function fetchJobArtifacts(jobId: string): Promise<Artifact[]> {
   if (!res.ok) throw new Error(`Failed to fetch artifacts: ${res.status}`)
   return res.json() as Promise<Artifact[]>
 }
+
+export async function deleteMyHistory(jobId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/me/history/${jobId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(`Failed to delete history item: ${res.status}`)
+  return
+}
