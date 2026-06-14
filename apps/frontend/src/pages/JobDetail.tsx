@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  artifactDownloadUrl,
-  artifactPreviewUrl,
   cancelJob,
   fetchJob,
   fetchJobArtifacts,
   type Artifact,
   type Job,
 } from '../api/api'
+import ArtifactViewer from '../components/ArtifactViewer'
 import './JobDetail.css'
 
 const POLL_MS = 2000
@@ -70,6 +69,7 @@ function JobDetail() {
     let timer: ReturnType<typeof setInterval> | undefined
 
     async function update() {
+      if (!jobId) return
       try {
         const data = await fetchJob(jobId)
         setJob(data)
@@ -88,7 +88,7 @@ function JobDetail() {
         if (data.status === 'SUCCEEDED') {
           const list = await fetchJobArtifacts(jobId)
           const outputs = list.filter(
-            (a) => a.preview_supported && a.artifact_type !== 'INPUT',
+            (a) => a.artifact_type !== 'INPUT',
           )
           setArtifacts(outputs)
         }
@@ -183,30 +183,7 @@ function JobDetail() {
           <h2>Results</h2>
           {artifacts.length === 0 && <p>No files to show yet.</p>}
           {artifacts.map((artifact) => (
-            <div key={artifact.id} className="result-item">
-              <p>{artifact.file_name}</p>
-              <p>
-                <a href={artifactDownloadUrl(artifact.id)}>Download</a>
-              </p>
-              {artifact.preview_supported && (
-                <div>
-                  {artifact.content_type.startsWith('image/') ? (
-                    <img
-                      src={artifactPreviewUrl(artifact.id)}
-                      alt={artifact.file_name}
-                      width={400}
-                    />
-                  ) : (
-                    <iframe
-                      src={artifactPreviewUrl(artifact.id)}
-                      title={artifact.file_name}
-                      width="100%"
-                      height={200}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
+            <ArtifactViewer key={artifact.id} artifact={artifact} />
           ))}
         </div>
       )}
