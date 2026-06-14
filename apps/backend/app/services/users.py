@@ -5,6 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User
 
 
+async def list_users_service(db: AsyncSession) -> list[User]:
+    result = await db.execute(select(User).order_by(User.created_at))
+    return list(result.scalars().all())
+
+
 async def get_user_by_subject_service(db: AsyncSession, subject_id: str) -> User | None:
     result = await db.execute(select(User).where(User.subject_id == subject_id))
     return result.scalar_one_or_none()

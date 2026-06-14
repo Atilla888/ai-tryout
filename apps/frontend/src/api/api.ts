@@ -264,3 +264,57 @@ export async function updateCreatorSpace(id: string, data: Partial<SpacePayload>
 export async function validateCreatorSpace(id: string): Promise<ValidationResult> {
   return creatorRequest<ValidationResult>(`${BASE_URL}/creator/spaces/${id}/validate`, { method: 'POST' })
 }
+
+// ── Admin API ──────────────────────────────────────────────────────────────────
+
+export interface AdminUser {
+  id: string
+  email: string
+  display_name: string | null
+  role: string
+  idp: string
+  subject_id: string
+  created_at: string
+}
+
+export interface AdminSpaceUpdate {
+  name?: string
+  description?: string
+  task_type?: string
+  visibility?: 'PUBLIC' | 'PRIVATE'
+  status?: 'DRAFT' | 'PUBLISHED' | 'DISABLED'
+  owner_id?: string
+}
+
+async function adminRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(), ...(options.headers as Record<string, string>) },
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { detail?: string }
+    throw new Error(body.detail ?? `Request failed: ${res.status}`)
+  }
+  if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
+}
+
+export async function fetchAdminSpaces(): Promise<CreatorSpace[]> {
+  return adminRequest<CreatorSpace[]>(`${BASE_URL}/admin/spaces`)
+}
+
+export async function adminUpdateSpace(id: string, data: AdminSpaceUpdate): Promise<CreatorSpace> {
+  return adminRequest<CreatorSpace>(`${BASE_URL}/admin/spaces/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function adminDeleteSpace(id: string): Promise<void> {
+  return adminRequest<void>(`${BASE_URL}/admin/spaces/${id}`, { method: 'DELETE' })
+}
+
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
+  return adminRequest<AdminUser[]>(`${BASE_URL}/admin/users`)
+}

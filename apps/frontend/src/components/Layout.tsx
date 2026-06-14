@@ -50,6 +50,9 @@ function Layout() {
           <NavLink to="/creator" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
             Creator
           </NavLink>
+          <NavLink to="/admin" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
+            Admin
+          </NavLink>
           <AuthControls />
         </div>
       </nav>
