@@ -1,8 +1,8 @@
 # DB + business logic
-from sqlalchemy import select
+from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.spaces import SpaceCreate, SpaceUpdate
-from app.models import Space
+from app.models import Artifact, Job, Space
 from uuid import UUID
 
 async def create_space_service(db: AsyncSession, data: SpaceCreate, owner_id: UUID):
@@ -45,3 +45,13 @@ async def update_space_service(db: AsyncSession, space: Space, data: SpaceUpdate
     await db.commit()
     await db.refresh(space)
     return space
+
+async def delete_space_service(db: AsyncSession, space: Space) -> None:
+    await db.execute(
+        sql_delete(Artifact).where(
+            Artifact.job_id.in_(select(Job.id).where(Job.space_id == space.id))
+        )
+    )
+    await db.execute(sql_delete(Job).where(Job.space_id == space.id))
+    await db.delete(space)
+    await db.commit()

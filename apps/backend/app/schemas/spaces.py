@@ -67,6 +67,10 @@ class SpaceUpdate(BaseModel):
     status: str | None = None
 
 
+class AdminSpaceUpdate(SpaceUpdate):
+    owner_id: UUID | None = None
+
+
 class SpaceRead(BaseModel):
     id: UUID
     created_at: datetime
