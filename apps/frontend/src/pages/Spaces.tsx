@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { fetchSpace, submitJob } from '../api/api'
-import type { InputFieldConfig, SpaceDetail } from '../api/api'
+import { useAuth } from 'react-oidc-context'
+import {
+  artifactDownloadUrl,
+  fetchJobArtifacts,
+  fetchMyHistory,
+  fetchSpace,
+  submitJob,
+} from '../api/api'
+import type { Artifact, InputFieldConfig, Job, JobStatus, SpaceDetail } from '../api/api'
 import './Spaces.css'
 
 type FormValues = Record<string, string | File | null>
@@ -9,6 +16,41 @@ type FormErrors = Record<string, string>
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm']
+
+const ACTIVE_JOB_STATUSES: JobStatus[] = ['QUEUED', 'STARTING', 'RUNNING', 'CANCELLING']
+const RECENT_RUNS_LIMIT = 5
+const HISTORY_POLL_MS = 3000
+const SECONDS_PER_QUEUE_POSITION = 15
+
+function formatEta(queuePosition: number): string {
+  const seconds = queuePosition * SECONDS_PER_QUEUE_POSITION
+  if (seconds < 60) return `~${seconds}s`
+  return `~${Math.round(seconds / 60)}m`
+}
+
+function queueStatus(job: Job): { line: string; progress: number } {
+  switch (job.status) {
+    case 'QUEUED':
+      return {
+        line:
+          job.queue_position != null
+            ? `Position ${job.queue_position} in queue · ${formatEta(job.queue_position)} remaining`
+            : 'Waiting in queue',
+        progress: 0,
+      }
+    case 'STARTING':
+      return { line: 'Starting your job...', progress: 0 }
+    case 'RUNNING':
+      return {
+        line: job.progress_message || `Running · ${job.progress_percent}%`,
+        progress: job.progress_percent,
+      }
+    case 'CANCELLING':
+      return { line: 'Cancelling...', progress: job.progress_percent }
+    default:
+      return { line: job.status, progress: 0 }
+  }
+}
 
 function validateForm(inputs: InputFieldConfig[], values: FormValues): FormErrors {
   const errors: FormErrors = {}
@@ -196,6 +238,7 @@ function Field({ config, value, error, onChange }: FieldProps) {
 function Spaces() {
   const { spaceId } = useParams<{ spaceId: string }>()
   const navigate = useNavigate()
+  const auth = useAuth()
 
   const [space, setSpace] = useState<SpaceDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -203,6 +246,9 @@ function Spaces() {
   const [values, setValues] = useState<FormValues>({})
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [recentJobs, setRecentJobs] = useState<Job[]>([])
+  const [downloadArtifact, setDownloadArtifact] = useState<Artifact | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     if (!spaceId) return
@@ -216,6 +262,59 @@ function Spaces() {
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
   }, [spaceId])
+
+  useEffect(() => {
+    if (!space || !auth.isAuthenticated) return
+
+    let cancelled = false
+    let timer: ReturnType<typeof setInterval> | undefined
+
+    const loadRecentJobs = async () => {
+      try {
+        const history = await fetchMyHistory()
+        if (cancelled) return
+        const forSpace = history
+          .filter((job) => job.space_id === space.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        setRecentJobs(forSpace)
+
+        const isActive = ACTIVE_JOB_STATUSES.includes(forSpace[0]?.status)
+        if (isActive && !timer) {
+          timer = setInterval(loadRecentJobs, HISTORY_POLL_MS)
+        } else if (!isActive && timer) {
+          clearInterval(timer)
+          timer = undefined
+        }
+      } catch {
+        // Recent runs / queue status are best-effort sidebar content.
+      }
+    }
+
+    loadRecentJobs()
+
+    return () => {
+      cancelled = true
+      if (timer) clearInterval(timer)
+    }
+  }, [space, auth.isAuthenticated])
+
+  useEffect(() => {
+    const latest = recentJobs[0]
+    if (!latest || latest.status !== 'SUCCEEDED') return
+
+    let cancelled = false
+    fetchJobArtifacts(latest.id)
+      .then((artifacts) => {
+        if (!cancelled) setDownloadArtifact(artifacts.find((a) => a.artifact_type !== 'INPUT') ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setDownloadArtifact(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [recentJobs])
 
   const handleChange = (name: string, val: string | File | null) => {
     setValues((prev) => ({ ...prev, [name]: val }))
@@ -254,6 +353,28 @@ function Spaces() {
   if (fetchError || !space) return <div className="detail-state">Failed to load space.</div>
 
   const inputs = space.ui_config?.inputs ?? []
+
+  const handleRunAgain = () => {
+    const initial: FormValues = {}
+    for (const input of inputs) initial[input.name] = null
+    setValues(initial)
+    setErrors({})
+  }
+
+  const handleCopyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      alert('Could not copy link')
+    }
+  }
+
+  const latestJob = recentJobs[0]
+  const activeJob = latestJob && ACTIVE_JOB_STATUSES.includes(latestJob.status) ? latestJob : null
+  const canDownload =
+    latestJob?.status === 'SUCCEEDED' && downloadArtifact != null && downloadArtifact.job_id === latestJob.id
 
   return (
     <div>
@@ -306,6 +427,54 @@ function Spaces() {
         </div>
 
         <aside>
+          {auth.isAuthenticated && (
+            <div className="sidebar-card sidebar-actions">
+              <button
+                type="button"
+                className="action-download"
+                onClick={() => canDownload && window.open(artifactDownloadUrl(downloadArtifact.id), '_blank')}
+                disabled={!canDownload}
+              >
+                Download
+              </button>
+              <button type="button" className="action-retry" onClick={handleRunAgain}>
+                Run again
+              </button>
+              <Link className="action-link" to="/history">
+                View in My History
+              </Link>
+              <button type="button" className="action-link" onClick={handleCopyShareLink}>
+                {linkCopied ? 'Link copied!' : 'Copy share link'}
+              </button>
+            </div>
+          )}
+
+          {activeJob && (
+            <div className="sidebar-card status-card">
+              <strong>Queue status</strong>
+              <div className="status-line">{queueStatus(activeJob).line}</div>
+              <div className="progress-bar">
+                <span style={{ width: `${queueStatus(activeJob).progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          {recentJobs.length > 0 && (
+            <div className="sidebar-card sidebar-block">
+              <h2>Recent runs</h2>
+              <ul className="list-compact">
+                {recentJobs.slice(0, RECENT_RUNS_LIMIT).map((job) => (
+                  <li key={job.id}>
+                    <Link to={`/jobs/${job.id}`} className="list-compact-link">
+                      <span className="job-id">{job.id.slice(0, 8)}</span>
+                      <span>{job.status.toLowerCase()}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="sidebar-card sidebar-block">
             <h2>About this space</h2>
             <div className="about-copy">
