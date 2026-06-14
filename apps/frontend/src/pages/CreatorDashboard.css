@@ -1,0 +1,188 @@
+.creator-page {
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e6e7eb;
+  padding: 28px;
+}
+
+.creator-dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 16px;
+}
+
+.creator-dash-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.creator-dash-sub {
+  font-size: 14px;
+  color: #6e7280;
+}
+
+.creator-loading {
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 24px 0;
+}
+
+.creator-error-box {
+  background: #fff5f5;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.creator-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  font-size: 15px;
+}
+
+.creator-space-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.creator-space-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid #e6e7eb;
+  border-radius: 14px;
+  background: #fafafa;
+  transition: border-color 0.15s;
+}
+
+.creator-space-row:hover {
+  border-color: #f5c030;
+}
+
+.creator-space-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.creator-space-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-right: 8px;
+}
+
+.creator-space-slug {
+  font-size: 13px;
+  color: #9ca3af;
+  font-family: monospace;
+}
+
+.creator-space-desc {
+  font-size: 13px;
+  color: #6e7280;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creator-space-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.creator-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.creator-status-draft {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.creator-status-published {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.creator-status-disabled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.creator-vis-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.creator-vis-public {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.creator-vis-private {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.btn-creator-primary {
+  background: #f5c030;
+  color: #412402;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-creator-primary:hover {
+  background: #e6b52b;
+}
+
+.btn-creator-secondary {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-creator-secondary:hover {
+  border-color: #f5c030;
+}

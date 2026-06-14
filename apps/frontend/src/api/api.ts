@@ -180,3 +180,87 @@ export async function deleteMyHistory(jobId: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to delete history item: ${res.status}`)
   return
 }
+
+// ── Creator API ────────────────────────────────────────────────────────────────
+
+export interface CreatorInputDef {
+  name: string
+  type: 'text' | 'file' | 'number' | 'select'
+  label: string
+  required?: boolean
+  options?: string[]
+}
+
+export interface CreatorSpace {
+  id: string
+  slug: string
+  name: string
+  description: string
+  task_type: string
+  input_types: string[]
+  output_types: string[]
+  owner_id: string
+  container_image: string
+  ui_config: { inputs: CreatorInputDef[] }
+  runner_config: Record<string, unknown>
+  visibility: 'PUBLIC' | 'PRIVATE'
+  status: 'DRAFT' | 'PUBLISHED' | 'DISABLED'
+  created_at: string
+}
+
+export interface SpacePayload {
+  slug: string
+  name: string
+  description: string
+  task_type: string
+  input_types: string[]
+  output_types: string[]
+  container_image: string
+  ui_config: { inputs: CreatorInputDef[] }
+  runner_config: Record<string, unknown>
+  visibility: 'PUBLIC' | 'PRIVATE'
+  status: 'DRAFT' | 'PUBLISHED' | 'DISABLED'
+}
+
+export interface FieldError {
+  field: string
+  message: string
+}
+
+export interface ValidationResult {
+  valid: boolean
+  errors: FieldError[]
+}
+
+async function creatorRequest<T>(url: string, options: RequestInit): Promise<T> {
+  const res = await fetch(url, { ...options, headers: { ...authHeaders(), ...options.headers as Record<string,string> } })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { detail?: string }
+    throw new Error(body.detail ?? `Request failed: ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
+export async function fetchMySpaces(): Promise<CreatorSpace[]> {
+  return creatorRequest<CreatorSpace[]>(`${BASE_URL}/creator/spaces`, {})
+}
+
+export async function createCreatorSpace(data: SpacePayload): Promise<CreatorSpace> {
+  return creatorRequest<CreatorSpace>(`${BASE_URL}/creator/spaces`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateCreatorSpace(id: string, data: Partial<SpacePayload>): Promise<CreatorSpace> {
+  return creatorRequest<CreatorSpace>(`${BASE_URL}/creator/spaces/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function validateCreatorSpace(id: string): Promise<ValidationResult> {
+  return creatorRequest<ValidationResult>(`${BASE_URL}/creator/spaces/${id}/validate`, { method: 'POST' })
+}

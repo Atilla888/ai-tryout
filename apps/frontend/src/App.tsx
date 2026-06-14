@@ -6,6 +6,8 @@ import Home from './pages/Home'
 import Spaces from './pages/Spaces'
 import JobDetail from './pages/JobDetail'
 import History from './pages/History'
+import CreatorDashboard from './pages/CreatorDashboard'
+import SpaceEditor from './pages/SpaceEditor'
 import { setAccessToken } from './api/api'
 
 // Mirror the OIDC access token into the API client whenever it changes.
@@ -45,6 +47,30 @@ function App() {
             element={
               <RequireAuth>
                 <History />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="creator"
+            element={
+              <RequireAuth>
+                <CreatorDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="creator/spaces/new"
+            element={
+              <RequireAuth>
+                <SpaceEditor />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="creator/spaces/:spaceId/edit"
+            element={
+              <RequireAuth>
+                <SpaceEditor />
               </RequireAuth>
             }
           />
