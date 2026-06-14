@@ -66,6 +66,7 @@ export interface SpaceDetail extends Space {
 export interface Job {
   id: string
   space_id: string
+  space_name: string | null
   user_id: string
   status: JobStatus
   queue_position: number | null
