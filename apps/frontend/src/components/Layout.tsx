@@ -47,6 +47,9 @@ function Layout() {
           <NavLink to="/history" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
             History
           </NavLink>
+          <NavLink to="/creator" className={({ isActive }) => 'sara-nav-link' + (isActive ? ' active' : '')}>
+            Creator
+          </NavLink>
           <AuthControls />
         </div>
       </nav>
