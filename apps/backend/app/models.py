@@ -4,11 +4,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Boolean, ForeignKey, Integer, String, DateTime, Uuid, UniqueConstraint, func
 import uuid
+import uuid6
 from typing import Any
 
 class User(Base):
     __tablename__ = 'users'
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid7) #7 time-based + random, sortable by creation time
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid6.uuid7) #7 time-based + random, sortable by creation time
     subject_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     idp: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
@@ -22,7 +23,7 @@ class User(Base):
 class Space(Base):
     __tablename__ = "spaces"
     __table_args__ = (UniqueConstraint("owner_id", "slug", name="uq_spaces_owner_slug"),)
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid6.uuid7)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -41,7 +42,7 @@ class Space(Base):
 
 class Job(Base):
     __tablename__ = "jobs"
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid6.uuid7)
     status: Mapped[str] = mapped_column(String(100), nullable=False, default="QUEUED")
     queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     progress_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -63,7 +64,7 @@ class Job(Base):
 
 class Artifact(Base):
     __tablename__ = "artifacts"
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid7)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid6.uuid7)
     artifact_type: Mapped[str] = mapped_column(String(100), nullable=False)
     file_name: Mapped[str] = mapped_column(String(100), nullable=False)
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)

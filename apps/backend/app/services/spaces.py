@@ -1,7 +1,7 @@
 # DB + business logic
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.spaces import SpaceCreate
+from app.schemas.spaces import SpaceCreate, SpaceUpdate
 from app.models import Space
 from uuid import UUID
 
@@ -34,3 +34,14 @@ async def list_spaces_service(db: AsyncSession):
 async def get_space_by_id_service(db: AsyncSession, space_id: UUID):
     result = await db.execute(select(Space).where(Space.id == space_id))
     return result.scalar_one_or_none()
+
+async def list_spaces_by_owner_service(db: AsyncSession, owner_id: UUID) -> list[Space]:
+    result = await db.execute(select(Space).where(Space.owner_id == owner_id))
+    return list(result.scalars().all())
+
+async def update_space_service(db: AsyncSession, space: Space, data: SpaceUpdate) -> Space:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(space, field, value)
+    await db.commit()
+    await db.refresh(space)
+    return space
