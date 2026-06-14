@@ -11,7 +11,7 @@ class NotificationStub {
   static permission: NotificationPermission = 'denied'
   static requestPermission = vi.fn(async (): Promise<NotificationPermission> => 'denied')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  constructor(title: string, options?: NotificationOptions) {}
+  constructor(_title: string, _options?: NotificationOptions) {}
 }
 
 vi.stubGlobal('Notification', NotificationStub)

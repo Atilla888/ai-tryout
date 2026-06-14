@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchMyHistory, type Job, type JobStatus } from '../api/api'
+import { deleteMyHistory, fetchMyHistory, type Job, type JobStatus } from '../api/api'
 import './History.css'
 
 const PAGE_SIZE = 10
@@ -39,7 +39,12 @@ function History() {
 
   useEffect(() => {
     fetchMyHistory()
-      .then(setJobs)
+      .then((history) => {
+        const sorted = history
+          .slice()
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        setJobs(sorted)
+      })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
@@ -51,6 +56,16 @@ function History() {
     const start = (currentPage - 1) * PAGE_SIZE
     return jobs.slice(start, start + PAGE_SIZE)
   }, [jobs, currentPage])
+
+  async function handleDelete(jobId: string) {
+    if (!window.confirm('Delete this history entry?')) return
+    try {
+      await deleteMyHistory(jobId)
+      setJobs((prev) => prev.filter((j) => j.id !== jobId))
+    } catch (e: unknown) {
+      window.alert(e instanceof Error ? e.message : 'Failed to delete history entry')
+    }
+  }
 
   return (
     <div className="history-card">
@@ -92,6 +107,13 @@ function History() {
                   </div>
                   <span className={STATUS_CLASSES[job.status]}>{STATUS_LABELS[job.status]}</span>
                 </Link>
+                <button
+                  type="button"
+                  className="history-delete"
+                  onClick={() => handleDelete(job.id)}
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
