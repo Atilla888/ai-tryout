@@ -1,0 +1,20 @@
+stages:
+  - test
+
+frontend-test:
+  stage: test
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - apps/frontend/package-lock.json
+    paths:
+      - apps/frontend/node_modules
+  before_script:
+    - cd apps/frontend
+    - npm ci
+  script:
+    - npm run test
+  rules:
+    - changes:
+        - apps/frontend/**/*
