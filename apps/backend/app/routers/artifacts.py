@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db.session import get_db
 from app.services.artifacts import (
     artifact_absolute_path,
     ensure_artifact_available,

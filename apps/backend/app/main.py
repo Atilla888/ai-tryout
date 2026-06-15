@@ -7,10 +7,10 @@ from sqlalchemy import text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from app.db import get_db, AsyncSessionLocal
+from app.db.session import get_db, AsyncSessionLocal
 from app.routers import admin, artifacts, creator, internal, jobs, me, spaces
 from app.schemas.common import HealthResponse
-from app.models import Artifact, Job
+from app.db.models import Artifact, Job
 
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
 

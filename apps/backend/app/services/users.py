@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User
+from app.db.models import User
 
 
 async def list_users_service(db: AsyncSession) -> list[User]:

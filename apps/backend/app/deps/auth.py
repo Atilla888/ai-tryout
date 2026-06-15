@@ -16,9 +16,9 @@ import jwt
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.db import get_db
-from app.models import User
+from app.core.config import settings
+from app.db.session import get_db
+from app.db.models import User
 from app.services.users import get_or_create_user_service
 
 

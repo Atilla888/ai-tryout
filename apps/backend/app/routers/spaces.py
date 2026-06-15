@@ -3,9 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db import get_db
+from app.db.session import get_db
 from app.deps.auth import require_role
-from app.models import User
+from app.db.models import User
 from app.schemas.spaces import SpaceCreate, SpaceRead
 from app.services.spaces import create_space_service, get_space_by_id_service, list_spaces_service
 from uuid import UUID

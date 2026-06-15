@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy import update
 
-from app.models import Artifact
+from app.db.models import Artifact
 
 
 @pytest.mark.asyncio

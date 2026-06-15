@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-from app.models import Space
+from app.db.models import Space
 from app.schemas.validation import FieldError, ValidationResult
 
 _ALLOWED_INPUT_TYPES = {"text", "file", "number", "select"}

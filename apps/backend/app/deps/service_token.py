@@ -1,6 +1,6 @@
 from fastapi import Header, HTTPException, status
 
-from app.config import settings
+from app.core.config import settings
 
 
 async def verify_internal_service_token(

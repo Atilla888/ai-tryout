@@ -7,7 +7,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
 
-from app.models import Artifact, Job, Space, User
+from app.db.models import Artifact, Job, Space, User
 from app.services.jobs import delete_job_from_history_service, list_jobs_by_user_service
 from app.main import cleanup_expired_artifacts
 

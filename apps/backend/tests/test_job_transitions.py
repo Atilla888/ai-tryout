@@ -5,7 +5,7 @@ import uuid
 import pytest
 from sqlalchemy import insert, select
 
-from app.models import Job, Space, User
+from app.db.models import Job, Space, User
 from app.schemas.jobs import JobStatus
 from app.services.job_transitions import JobTransitionError, ensure_transition
 from app.services.jobs import (

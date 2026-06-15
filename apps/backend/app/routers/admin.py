@@ -4,9 +4,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db.session import get_db
 from app.deps.auth import require_role
-from app.models import User
+from app.db.models import User
 from app.schemas.spaces import AdminSpaceUpdate, SpaceDetail
 from app.schemas.users import UserRead
 from app.services.spaces import (

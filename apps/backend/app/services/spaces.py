@@ -2,7 +2,7 @@
 from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.spaces import SpaceCreate, SpaceUpdate
-from app.models import Artifact, Job, Space
+from app.db.models import Artifact, Job, Space
 from uuid import UUID
 
 async def create_space_service(db: AsyncSession, data: SpaceCreate, owner_id: UUID):

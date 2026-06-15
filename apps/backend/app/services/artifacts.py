@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Artifact
+from app.db.models import Artifact
 from app.services.storage import resolve_storage_path
 
 

@@ -1,22 +1,18 @@
+# only job is to read values from .env
 from pathlib import Path
-
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Monorepo root (ai-spaces/) — .env lives next to docker-compose.yml
-_file = Path(__file__).resolve()
-_REPO_ROOT = _file.parents[3] if len(_file.parents) > 3 else _file.parent
-_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_CONFIG_FILE = Path(__file__).resolve()
+_REPO_ROOT = _CONFIG_FILE.parents[4]
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(
-            _REPO_ROOT / ".env",
-            _BACKEND_ROOT / ".env",
-            ".env",
-        ),
-        extra="ignore",
+        env_file=_REPO_ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+
     )
 
     database_url: str

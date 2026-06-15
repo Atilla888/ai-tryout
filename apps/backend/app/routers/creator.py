@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db.session import get_db
 from app.deps.auth import require_role
-from app.models import User
+from app.db.models import User
 from app.schemas.spaces import SpaceCreate, SpaceDetail, SpaceUpdate
 from app.schemas.validation import ValidationResult
 from app.services.spaces import (

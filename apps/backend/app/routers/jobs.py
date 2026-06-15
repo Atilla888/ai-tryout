@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
-from app.db import get_db
+from app.db.session import get_db
 from app.deps.auth import CurrentUser
-from app.models import User
+from app.db.models import User
 from app.schemas.artifacts import ArtifactRead
 from app.schemas.jobs import JobRead, JobStatus, JobSubmitResponse, TERMINAL_JOB_STATUSES
 from app.services.artifacts import list_artifacts_by_job_service

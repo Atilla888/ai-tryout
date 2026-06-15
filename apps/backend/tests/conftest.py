@@ -16,10 +16,10 @@ from sqlalchemy import JSON, insert
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config import settings
-from app.db import Base, get_db
+from app.core.config import settings
+from app.db.session import Base, get_db
 from app.main import app
-from app.models import Job, Space, User
+from app.db.models import Job, Space, User
 
 
 def _prepare_sqlite_schema() -> None:

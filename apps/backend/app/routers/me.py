@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 
 
-from app.db import get_db
+from app.db.session import get_db
 from app.deps.auth import CurrentUser
 from app.schemas.jobs import JobRead
 from app.schemas.users import UserRead

@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db.session import get_db
 from app.deps.service_token import verify_internal_service_token
 from app.schemas.artifacts import ArtifactRead
 from app.schemas.internal import JobFailUpdate, JobProgressUpdate

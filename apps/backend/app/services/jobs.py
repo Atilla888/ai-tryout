@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Artifact, Job
+from app.db.models import Artifact, Job
 from app.schemas.jobs import JobStatus, JobSubmitResponse
 from app.services.job_transitions import JobTransitionError, ensure_transition
 from app.services.storage import save_job_input_file, save_job_output_file

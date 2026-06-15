@@ -1,0 +1,17 @@
+from collections.abc import AsyncGenerator
+from app.core.config import settings
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
+
+async_engine = create_async_engine(settings.database_url, pool_pre_ping=True, echo=False)
+AsyncSessionLocal = async_sessionmaker(bind=async_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
+
+# AsyncGenerator[AsyncSession, None] -> This async function gives out AsyncSession objects. It does not expect anything sent back into it.
+'''This function gives a database session to FastAPI endpoints.
+The async with block guarantees cleanup'''
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

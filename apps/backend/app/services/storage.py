@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
-from app.config import settings
+from app.core.config import settings
 
 
 def storage_root() -> Path:
