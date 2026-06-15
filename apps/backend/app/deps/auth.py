@@ -38,6 +38,8 @@ class AuthProvider(ABC):
 
 
 def _bearer_token(authorization: str | None) -> str:
+    """Extracts the raw token string from 'Bearer <token>'. Raises 401 if the header is missing
+    or malformed."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -102,6 +104,8 @@ class DevAuthProvider(AuthProvider):
 
 
 def _build_provider() -> AuthProvider:
+    """Selects the auth provider based on AUTH_PROVIDER env var. Defaults to DevAuthProvider
+    so the server starts without any OIDC configuration in local development."""
     if settings.auth_provider == "oidc":
         return OIDCAuthProvider()
     return DevAuthProvider()

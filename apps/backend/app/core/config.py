@@ -16,6 +16,9 @@ _ENV_FILE = _REPO_ROOT / ".env"
 
 
 class Settings(BaseSettings):
+    """Reads all configuration from environment variables or the monorepo .env file.
+    AUTH_PROVIDER should be 'oidc' in production; it defaults to 'dev' which bypasses
+    Keycloak entirely so the app can run locally without an IdP."""
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE if _ENV_FILE.exists() else None,
         env_file_encoding="utf-8",

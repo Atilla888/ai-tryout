@@ -14,6 +14,7 @@ interface Props {
   space: Space
 }
 
+/** Clickable card shown in the space listing. Navigates to the space detail page on click. */
 function SpaceCard({ space }: Props) {
   const navigate = useNavigate()
 

@@ -16,6 +16,8 @@ CreatorUser = Annotated[User, Depends(require_role("space_creator", "admin"))]
 
 @router.post("", response_model=SpaceRead, status_code=status.HTTP_201_CREATED)
 async def create_space(db: db_dependency, data: SpaceCreate, creator: CreatorUser):
+    """Creates a new space. Requires space_creator or admin role.
+    Returns 409 if a space with the same slug already exists for this owner."""
     try:
         return await create_space_service(db=db, data=data, owner_id=creator.id)
     except IntegrityError: #db rejected insert
@@ -24,11 +26,13 @@ async def create_space(db: db_dependency, data: SpaceCreate, creator: CreatorUse
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Space with this slug already exists for this owner")
 
 @router.get("", response_model=list[SpaceRead], status_code=status.HTTP_200_OK)
-async def get_spaces(db: db_dependency): # add filters in services
+async def get_spaces(db: db_dependency):
+    """Returns all spaces. No auth required so the homepage loads without login."""
     return await list_spaces_service(db)
 
 @router.get("/{space_id}", response_model=SpaceRead, status_code=status.HTTP_200_OK)
 async def get_space_by_id(db: db_dependency, space_id: UUID):
+    """Returns a single space by its public UUID. Returns 404 if not found."""
     space = await get_space_by_id_service(db= db, space_id= space_id)
 
     if space is None:

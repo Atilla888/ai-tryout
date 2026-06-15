@@ -13,6 +13,7 @@ jwks_client = PyJWKClient(settings.oidc_jwks_url)
 
 
 class CurrentUser(BaseModel):
+    """Normalized user identity extracted from a validated JWT token."""
     subject_id: str
     username: str | None = None
     email: str | None = None
@@ -21,6 +22,7 @@ class CurrentUser(BaseModel):
 
 
 def _extract_roles(claims: dict[str, Any]) -> list[str]:
+    """Merges realm-level roles and client-specific roles from Keycloak token claims."""
     realm_roles = claims.get("realm_access", {}).get("roles", [])
 
     client_roles = (
@@ -35,6 +37,8 @@ def _extract_roles(claims: dict[str, Any]) -> list[str]:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> CurrentUser:
+    """FastAPI dependency: validates the bearer token against the JWKS endpoint
+    and returns the decoded user identity. Raises 401 if the token is missing or invalid."""
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

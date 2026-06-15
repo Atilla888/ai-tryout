@@ -29,6 +29,7 @@ db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 
 def _job_or_404(job):
+    """Raises 404 if the job is None. Used as a helper to keep route handlers concise."""
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return job
@@ -36,6 +37,7 @@ def _job_or_404(job):
 
 @router.patch("/jobs/{job_id}/start", response_model=JobRead)
 async def patch_job_start(db: db_dependency, job_id: UUID):
+    """Called by the orchestrator when it picks up a job. Transitions QUEUED -> STARTING."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await start_job_service(db, job)
@@ -45,6 +47,8 @@ async def patch_job_start(db: db_dependency, job_id: UUID):
 
 @router.patch("/jobs/{job_id}/progress", response_model=JobRead)
 async def patch_job_progress(db: db_dependency, job_id: UUID, body: JobProgressUpdate):
+    """Called by the runner to report progress. The first call implicitly transitions
+    STARTING -> RUNNING and sets started_at."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await update_job_progress_service(
@@ -92,6 +96,8 @@ async def post_job_artifact(
     preview_supported: bool = Form(False),
     file: UploadFile = File(...),
 ):
+    """Called by the runner to upload an output file. Saves the file to storage and
+    creates the corresponding Artifact record."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is required")

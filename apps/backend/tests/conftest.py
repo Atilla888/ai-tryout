@@ -23,6 +23,7 @@ from app.db.models import Job, Space, User
 
 
 def _prepare_sqlite_schema() -> None:
+    """Replaces JSONB column types with JSON so SQLite can handle them in tests."""
     if not settings.database_url.startswith("sqlite"):
         return
     for table in Base.metadata.tables.values():
@@ -35,6 +36,7 @@ TEST_SERVICE_TOKEN = "test-internal-token"
 
 @pytest.fixture(autouse=True)
 def configure_test_settings(tmp_path, monkeypatch):
+    """Redirects artifact storage to a temp directory and sets a known service token."""
     storage = tmp_path / "artifacts"
     storage.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(settings, "artifact_storage_root", str(storage))
@@ -43,6 +45,7 @@ def configure_test_settings(tmp_path, monkeypatch):
 
 @pytest_asyncio.fixture
 async def engine():
+    """Creates a fresh in-memory SQLite engine with the full schema, then drops it after each test."""
     _prepare_sqlite_schema()
     test_engine = create_async_engine(settings.database_url, echo=False)
     async with test_engine.begin() as conn:
@@ -55,6 +58,7 @@ async def engine():
 
 @pytest_asyncio.fixture
 async def db_session(engine):
+    """Provides a session scoped to a single test; rolled back automatically on teardown."""
     factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
         yield session
@@ -63,6 +67,7 @@ async def db_session(engine):
 
 @pytest_asyncio.fixture
 async def client(db_session):
+    """HTTPX async client wired to the test DB via dependency override; pre-sets the service token header."""
     async def override_get_db():
         yield db_session
 
@@ -78,6 +83,7 @@ async def client(db_session):
 
 @pytest_asyncio.fixture
 async def seed_job(db_session):
+    """Inserts a User, Space, and a RUNNING Job. Returns the job_id."""
     user_id = uuid.uuid7()
     space_id = uuid.uuid7()
     job_id = uuid.uuid7()

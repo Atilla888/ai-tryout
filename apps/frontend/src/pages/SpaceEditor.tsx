@@ -22,10 +22,13 @@ interface InputRow extends CreatorInputDef {
   optionsRaw: string
 }
 
+/** Creates a blank input row with a stable React key so list rendering is correct. */
 function emptyInputRow(key: number): InputRow {
   return { _key: key, name: '', type: 'text', label: '', required: false, optionsRaw: '' }
 }
 
+/** Strips the internal _key/_optionsRaw fields and converts the comma-separated options
+ * string back to an array for the API payload. */
 function toPayloadInputs(rows: InputRow[]): CreatorInputDef[] {
   return rows.map(({ _key: _k, optionsRaw, ...rest }) => {
     const def: CreatorInputDef = { ...rest }
@@ -36,6 +39,7 @@ function toPayloadInputs(rows: InputRow[]): CreatorInputDef[] {
   })
 }
 
+/** Converts saved API inputs back to the editable InputRow format for the form. */
 function fromExistingInputs(inputs: CreatorInputDef[]): InputRow[] {
   return inputs.map((inp, i) => ({
     ...inp,
@@ -44,6 +48,7 @@ function fromExistingInputs(inputs: CreatorInputDef[]): InputRow[] {
   }))
 }
 
+/** Parses the runner_config textarea string. Returns null if the JSON is invalid or not an object. */
 function parseRunnerConfig(raw: string): Record<string, unknown> | null {
   try {
     const parsed: unknown = JSON.parse(raw)
@@ -82,10 +87,13 @@ const DEFAULT_FORM: FormState = {
   runner_config_raw: '{}',
 }
 
+/** Derives a URL-safe slug from a display name (auto-applied until the user edits the slug manually). */
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+/** Create / edit page for a creator space. Handles draft saving, validation, publish/unpublish.
+ * Publish first saves the payload, then validates; on failure it reverts to DRAFT. */
 function SpaceEditor() {
   const { spaceId } = useParams<{ spaceId: string }>()
   const isEdit = Boolean(spaceId)

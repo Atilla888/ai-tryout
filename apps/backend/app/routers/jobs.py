@@ -26,12 +26,15 @@ db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 
 def _ensure_owner_or_admin(job, user: User) -> None:
+    """Raises 403 if the user is neither the job owner nor an admin."""
     if job.user_id != user.id and user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your job")
 
 
 @router.post("/spaces/{space_id}/jobs", response_model=JobSubmitResponse, status_code=status.HTTP_201_CREATED)
 async def create_job(request: Request, db: db_dependency, space_id: UUID, user: CurrentUser):
+    """Submit a new job to a space. Accepts multipart/form-data with text fields and
+    optional file uploads. Returns the initial job status and queue position."""
     form = await request.form()
     if not form:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job input is required")
@@ -64,11 +67,14 @@ async def create_job(request: Request, db: db_dependency, space_id: UUID, user: 
 
 @router.get("/jobs", response_model=list[JobRead])
 async def list_jobs(db: db_dependency, status_filter: JobStatus = Query(..., alias="status")):
+    """Returns all jobs with the given status. Primarily used by the orchestrator to
+    poll for QUEUED jobs."""
     return await list_jobs_by_status_service(db, status_filter)
 
 
 @router.get("/jobs/{job_id}", response_model=JobRead, status_code=status.HTTP_200_OK)
 async def get_job(db: db_dependency, job_id: UUID):
+    """Returns the current state of a job. The frontend polls this to show progress."""
     job = await get_job_by_id_service(db=db, job_id=job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
@@ -85,6 +91,8 @@ async def list_job_artifacts(db: db_dependency, job_id: UUID):
 
 @router.post("/jobs/{job_id}/cancel", response_model=JobRead, status_code=status.HTTP_200_OK)
 async def cancel_job(db: db_dependency, job_id: UUID, user: CurrentUser):
+    """Cancels a job. Only the job owner or an admin can cancel. Returns 409 if the
+    job is already in a terminal state."""
     job = await get_job_by_id_service(db=db, job_id=job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")

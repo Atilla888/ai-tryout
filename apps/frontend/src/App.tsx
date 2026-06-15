@@ -11,7 +11,8 @@ import SpaceEditor from './pages/SpaceEditor'
 import AdminDashboard from './pages/AdminDashboard'
 import { setAccessToken } from './api/api'
 
-// Mirror the OIDC access token into the API client whenever it changes.
+/** Keeps the module-level API token in sync with the OIDC session.
+ * Renders nothing — exists only for its side-effect via useEffect. */
 function TokenSync() {
   const auth = useAuth()
   useEffect(() => {
@@ -20,7 +21,7 @@ function TokenSync() {
   return null
 }
 
-// Gate a route behind a valid login; kick off the redirect if not signed in.
+/** Wraps protected routes — redirects to the OIDC login page if not authenticated. */
 function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
   useEffect(() => {

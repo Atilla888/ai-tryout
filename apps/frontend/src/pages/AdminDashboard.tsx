@@ -10,21 +10,20 @@ import {
 } from '../api/api'
 import './AdminDashboard.css'
 
-// ── Status / visibility badge ──────────────────────────────────────────────────
-
+/** Coloured pill for a space's publish status. */
 function StatusBadge({ status }: { status: string }) {
   return <span className={`adm-badge adm-status-${status.toLowerCase()}`}>{status}</span>
 }
 
+/** Coloured pill for a space's visibility (PUBLIC / PRIVATE). */
 function VisBadge({ visibility }: { visibility: string }) {
   return <span className={`adm-badge adm-vis-${visibility.toLowerCase()}`}>{visibility}</span>
 }
 
+/** Coloured pill for a user's role. */
 function RoleBadge({ role }: { role: string }) {
   return <span className={`adm-badge adm-role-${role.toLowerCase()}`}>{role}</span>
 }
-
-// ── Inline space-edit form ─────────────────────────────────────────────────────
 
 interface EditFormProps {
   space: CreatorSpace
@@ -33,6 +32,7 @@ interface EditFormProps {
   onClose: () => void
 }
 
+/** Inline form that lets an admin change a space's status, visibility, and owner. */
 function SpaceEditForm({ space, users, onSave, onClose }: EditFormProps) {
   const [status, setStatus] = useState(space.status)
   const [visibility, setVisibility] = useState(space.visibility)
@@ -93,8 +93,6 @@ function SpaceEditForm({ space, users, onSave, onClose }: EditFormProps) {
   )
 }
 
-// ── Spaces tab ─────────────────────────────────────────────────────────────────
-
 interface SpacesTabProps {
   spaces: CreatorSpace[]
   users: AdminUser[]
@@ -102,6 +100,7 @@ interface SpacesTabProps {
   onSpaceDeleted: (id: string) => void
 }
 
+/** Admin spaces table with search, inline edit form, and two-step delete confirmation. */
 function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabProps) {
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -235,8 +234,7 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
   )
 }
 
-// ── Users tab ──────────────────────────────────────────────────────────────────
-
+/** Admin users table with name/email search. Read-only — user management is via Keycloak. */
 function UsersTab({ users }: { users: AdminUser[] }) {
   const [query, setQuery] = useState('')
   const filtered = users.filter((u) => {
@@ -287,10 +285,9 @@ function UsersTab({ users }: { users: AdminUser[] }) {
   )
 }
 
-// ── Dashboard shell ────────────────────────────────────────────────────────────
-
 type Tab = 'spaces' | 'users'
 
+/** Admin dashboard shell — loads all spaces and users upfront, then renders the active tab. */
 function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('spaces')
   const [spaces, setSpaces] = useState<CreatorSpace[]>([])

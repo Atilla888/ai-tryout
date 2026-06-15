@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 
 
 class JobStatus(StrEnum):
+    """All possible states in the job lifecycle. CANCELLING is a transient state while
+    the runner is notified; it should quickly move to CANCELLED."""
     QUEUED = "QUEUED"
     STARTING = "STARTING"
     RUNNING = "RUNNING"
@@ -32,6 +34,7 @@ ACTIVE_JOB_STATUSES = frozenset({
 
 
 class JobSubmitResponse(BaseModel):
+    """Returned immediately after a job is created so the frontend can navigate to the job page."""
     id: int
     public_id: UUID
     status: JobStatus
@@ -39,6 +42,8 @@ class JobSubmitResponse(BaseModel):
 
 
 class JobRead(BaseModel):
+    """Full job representation returned by the polling and history endpoints.
+    space_name is denormalized here to avoid a second request from the frontend."""
     id: int
     public_id: UUID
     status: JobStatus

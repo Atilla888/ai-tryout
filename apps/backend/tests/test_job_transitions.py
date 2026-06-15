@@ -21,6 +21,7 @@ from app.services.jobs import (
 
 
 async def _seed_space_and_user(db_session):
+    """Inserts a User and a published Space into the test DB. Returns (user_id, space_id)."""
     user_id = uuid.uuid7()
     space_id = uuid.uuid7()
     unique = uuid.uuid7().hex

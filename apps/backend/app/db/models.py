@@ -7,6 +7,8 @@ import uuid
 from typing import Any
 
 class User(Base):
+    """Platform user, created automatically on first successful login (JIT provisioning).
+    subject_id + idp together identify the user uniquely across identity providers."""
     __tablename__="users"
     __table_args__=(UniqueConstraint("idp", "subject_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -23,6 +25,8 @@ class User(Base):
 
 
 class Space(Base):
+    """An AI space wraps a containerized model with a UI form definition and runner config.
+    slug must be unique per owner so a creator can have their own 'my-model' without clashing."""
     __tablename__ = "spaces"
     __table_args__ = (UniqueConstraint("owner_id", "slug"),)
 
@@ -46,6 +50,8 @@ class Space(Base):
     jobs: Mapped[list["Job"]] = relationship(back_populates="space")
 
 class Job(Base):
+    """A single submitted inference request. Goes through a state machine managed by the orchestrator:
+    QUEUED -> STARTING -> RUNNING -> SUCCEEDED/FAILED/CANCELLED."""
     __tablename__ = "jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid7)
@@ -70,6 +76,8 @@ class Job(Base):
 
 
 class Artifact(Base):
+    """A file produced or consumed by a job. The actual bytes live on disk at storage_path;
+    this record holds the metadata needed to serve and expire them."""
     __tablename__ = "artifacts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid7)

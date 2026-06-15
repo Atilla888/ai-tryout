@@ -6,6 +6,7 @@ from app.db.models import User
 
 
 async def list_users_service(db: AsyncSession) -> list[User]:
+    """Returns all registered users ordered by their registration date."""
     result = await db.execute(select(User).order_by(User.created_at))
     return list(result.scalars().all())
 
@@ -16,6 +17,8 @@ async def get_user_by_subject_service(
     subject_id: str,
     idp: str,
 ) -> User | None:
+    """Looks up a user by their IdP subject_id. Returns None if they have never logged in before.
+    idp is always 'keycloak' for now but kept for future multi-IdP support."""
     result = await db.execute(
         select(User).where(
             User.subject_id == subject_id,

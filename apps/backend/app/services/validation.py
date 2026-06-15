@@ -9,6 +9,8 @@ _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
+    """Validates the ui_config structure: checks that 'inputs' is a non-empty list and
+    that each entry has a unique name, a recognized type, and a label."""
     errors: list[FieldError] = []
 
     inputs = ui_config.get("inputs")
@@ -63,6 +65,8 @@ def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
 
 
 def _validate_runner_config(runner_config: dict[str, Any], container_image: str) -> list[FieldError]:
+    """Validates optional runner_config fields (timeout_seconds, memory_mb) against
+    the allowed ranges and confirms that container_image is not empty."""
     errors: list[FieldError] = []
 
     if not container_image or not container_image.strip():
@@ -90,6 +94,8 @@ def _validate_runner_config(runner_config: dict[str, Any], container_image: str)
 
 
 def validate_space_config(space: Space) -> ValidationResult:
+    """Runs all validation checks on a space's ui_config and runner_config.
+    Returns a ValidationResult that the creator can query before publishing."""
     errors: list[FieldError] = []
     errors.extend(_validate_ui_config(space.ui_config or {}))
     errors.extend(_validate_runner_config(space.runner_config or {}, space.container_image or ""))
