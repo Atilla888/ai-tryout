@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 import asyncio
 from datetime import datetime, timezone
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -77,6 +78,14 @@ app = FastAPI(
     version="0.2.0",
     openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:4173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(spaces.router)
