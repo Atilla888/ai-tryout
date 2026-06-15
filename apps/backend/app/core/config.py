@@ -1,36 +1,77 @@
 # only job is to read values from .env
+
 from pathlib import Path
+
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 _CONFIG_FILE = Path(__file__).resolve()
-_REPO_ROOT = _CONFIG_FILE.parents[4]
+
+# Local monorepo path:
+# ai-spaces/apps/backend/app/core/config.py
+# parents[4] = ai-spaces
+_REPO_ROOT = _CONFIG_FILE.parents[4] if len(_CONFIG_FILE.parents) > 4 else Path.cwd()
+_ENV_FILE = _REPO_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=_REPO_ROOT / ".env",
+        env_file=_ENV_FILE if _ENV_FILE.exists() else None,
         env_file_encoding="utf-8",
-        extra="ignore"
-
+        extra="ignore",
     )
 
-    database_url: str
-    alembic_database_url: str
+    database_url: str = Field(validation_alias=AliasChoices("DATABASE_URL"))
+
+    alembic_database_url: str = Field(
+        validation_alias=AliasChoices("ALEMBIC_DATABASE_URL")
+    )
+
     artifact_storage_root: str = Field(
         default="storage",
         validation_alias=AliasChoices("ARTIFACT_STORAGE_ROOT", "STORAGE_PATH"),
     )
-    internal_service_token: str = ""
 
-    # Authentication: "dev" (fixed local user) or "oidc" (Keycloak JWT validation)
-    auth_provider: str = "dev"
-    oidc_issuer: str = "http://localhost:8080/realms/ai-spaces"
-    oidc_audience: str = "ai-spaces-frontend"
-    oidc_verify_audience: bool = True
+    internal_service_token: str = Field(
+        default="",
+        validation_alias=AliasChoices("INTERNAL_SERVICE_TOKEN"),
+    )
 
-    @property
-    def oidc_jwks_url(self) -> str:
-        return f"{self.oidc_issuer.rstrip('/')}/protocol/openid-connect/certs"
+    auth_provider: str = Field(
+        default="dev",
+        validation_alias=AliasChoices("AUTH_PROVIDER"),
+    )
+
+    oidc_issuer: str = Field(
+        default="",
+        validation_alias=AliasChoices("OIDC_ISSUER"),
+    )
+
+    oidc_jwks_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("OIDC_JWKS_URL"),
+    )
+
+    oidc_client_id: str = Field(
+        default="ai-spaces-frontend",
+        validation_alias=AliasChoices("OIDC_CLIENT_ID"),
+    )
+
+    oidc_algorithm: str = Field(
+        default="RS256",
+        validation_alias=AliasChoices("OIDC_ALGORITHM"),
+    )
+
+    oidc_audience: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OIDC_AUDIENCE"),
+    )
+
+    oidc_verify_audience: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OIDC_VERIFY_AUDIENCE"),
+    )
+
 
 settings = Settings()

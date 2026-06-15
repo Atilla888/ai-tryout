@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.common import OrmBase
 
@@ -10,7 +10,8 @@ from app.schemas.common import OrmBase
 class SpaceListItem(OrmBase):
     """Lightweight space representation for list/card views."""
 
-    id: UUID
+    id: UUID = Field(validation_alias="public_id")
+    public_id: UUID
     name: str
     slug: str
     description: str
@@ -24,14 +25,14 @@ class SpaceListItem(OrmBase):
 class SpaceDetail(OrmBase):
     """Full space representation including UI and runner config."""
 
-    id: UUID
+    id: UUID = Field(validation_alias="public_id")
     name: str
     slug: str
     description: str
     task_type: str
     input_types: list[str]
     output_types: list[str]
-    owner_id: UUID
+    owner_id: int
     container_image: str
     ui_config: dict[str, Any]
     runner_config: dict[str, Any]
@@ -68,11 +69,11 @@ class SpaceUpdate(BaseModel):
 
 
 class AdminSpaceUpdate(SpaceUpdate):
-    owner_id: UUID | None = None
+    owner_id: int | None = None
 
 
 class SpaceRead(BaseModel):
-    id: UUID
+    id: UUID = Field(validation_alias="public_id")
     created_at: datetime
     slug: str
     name: str
@@ -85,6 +86,6 @@ class SpaceRead(BaseModel):
     runner_config: dict[str, Any]
     visibility: str
     status: str
-    owner_id: UUID
+    owner_id: int
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes= True)

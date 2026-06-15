@@ -32,13 +32,15 @@ ACTIVE_JOB_STATUSES = frozenset({
 
 
 class JobSubmitResponse(BaseModel):
-    id: UUID
+    id: int
+    public_id: UUID
     status: JobStatus
     queue_position: int | None = None
 
 
 class JobRead(BaseModel):
-    id: UUID
+    id: int
+    public_id: UUID
     status: JobStatus
     progress_percent: int
     progress_message: str | None
@@ -50,9 +52,9 @@ class JobRead(BaseModel):
     finished_at: datetime | None
     cancelled_at: datetime | None = None
     expires_at: datetime | None
-    space_id: UUID
+    space_id: int
     space_name: str | None = None
-    user_id: UUID
+    user_id: int
 
     model_config = {"from_attributes": True}
 

@@ -4,9 +4,9 @@ services:
     restart: unless-stopped
     container_name: ai_spaces_postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-aispacesuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aispacespass}
+      POSTGRES_DB: ${POSTGRES_DB:-aispaces}
     ports:
       - "5432:5432"
     volumes:
@@ -18,35 +18,44 @@ services:
       retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.6.3
+    container_name: ai_spaces_keycloak
     restart: unless-stopped
-    command: ["start-dev", "--import-realm"]
+    command:
+      - start-dev
+      - --import-realm
+      - --hostname=http://localhost:8080
+      - --hostname-strict=false
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     ports:
       - "8080:8080"
     volumes:
-      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak_data:/opt/keycloak/data
+      - ./infra/keycloak/ai-spaces-realm.json:/opt/keycloak/data/import/ai-spaces-realm.json:ro
 
   backend:
-    image: localhost/ai-spaces-tryout_backend:latest
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
+    image: ai-spaces-backend:dev
     restart: unless-stopped
     env_file:
-      - path: .env
-        required: false
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
       ALEMBIC_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+
+      AUTH_PROVIDER: oidc
+      OIDC_ISSUER: http://localhost:8080/realms/ai-spaces
+      OIDC_JWKS_URL: http://keycloak:8080/realms/ai-spaces/protocol/openid-connect/certs
+      OIDC_CLIENT_ID: ai-spaces-frontend
+      OIDC_ALGORITHM: RS256
+      OIDC_VERIFY_AUDIENCE: "false"
+
       ARTIFACT_STORAGE_ROOT: /app/storage
-      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-changeme-internal-token}
-      AUTH_PROVIDER: ${AUTH_PROVIDER:-oidc}
-      OIDC_ISSUER: ${OIDC_ISSUER:-http://keycloak:8080/realms/ai-spaces}
-      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-ai-spaces-frontend}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,3 +70,4 @@ services:
 volumes:
   postgres_data:
   storage_data:
+  keycloak_data:
