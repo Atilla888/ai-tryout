@@ -128,6 +128,7 @@ export function artifactDownloadUrl(artifactId: string): string {
 /** Fetches the list of all publicly visible spaces. No auth required. */
 export async function fetchSpaces(): Promise<Space[]> {
   const res = await fetch(`${BASE_URL}/spaces`)
+  if (!res.ok) throw new Error(`Failed to fetch spaces: ${res.status}`)
   return res.json() as Promise<Space[]>
 }
 

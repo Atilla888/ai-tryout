@@ -12,7 +12,7 @@ class User(Base):
     __tablename__="users"
     __table_args__=(UniqueConstraint("idp", "subject_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid7)
+    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid4)
     subject_id: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     idp: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
@@ -31,7 +31,7 @@ class Space(Base):
     __table_args__ = (UniqueConstraint("owner_id", "slug"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid7)
+    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid4)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -54,7 +54,7 @@ class Job(Base):
     QUEUED -> STARTING -> RUNNING -> SUCCEEDED/FAILED/CANCELLED."""
     __tablename__ = "jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid7)
+    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid4)
     status: Mapped[str] = mapped_column(String(100), nullable=False, default="QUEUED")
     queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     progress_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -80,7 +80,7 @@ class Artifact(Base):
     this record holds the metadata needed to serve and expire them."""
     __tablename__ = "artifacts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid7)
+    public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, default=uuid.uuid4)
     artifact_type: Mapped[str] = mapped_column(String(100), nullable=False)
     file_name: Mapped[str] = mapped_column(String(100), nullable=False)
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)
