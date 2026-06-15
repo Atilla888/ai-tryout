@@ -7,6 +7,7 @@ interface ArtifactViewerProps {
   artifact: Artifact
 }
 
+/** Formats an ISO expiration timestamp into a human-readable date/time string. */
 function formatExpirationDate(expiresAt: string | null): string {
   if (!expiresAt) return ''
   const date = new Date(expiresAt)
@@ -19,6 +20,8 @@ function formatExpirationDate(expiresAt: string | null): string {
   })
 }
 
+/** Renders an inline preview for image, audio, or text artifacts. Returns null
+ * if the artifact type has no supported preview. */
 function renderPreview(artifact: Artifact) {
   const previewUrl = artifactPreviewUrl(artifact.id)
 
@@ -50,6 +53,8 @@ function renderPreview(artifact: Artifact) {
   return null
 }
 
+/** Fetches and renders the raw text content of a text artifact.
+ * The fetch is triggered inside render rather than useEffect to avoid an extra render cycle. */
 function TextPreview({ previewUrl }: { previewUrl: string }) {
   const [content, setContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -94,6 +99,8 @@ function TextPreview({ previewUrl }: { previewUrl: string }) {
   )
 }
 
+/** Displays an artifact with an optional inline preview and a download button.
+ * The download is done client-side via Blob URL to force a Save-As dialog. */
 export function ArtifactViewer({ artifact }: ArtifactViewerProps) {
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)

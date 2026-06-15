@@ -7,6 +7,8 @@ from app.core.config import settings
 
 
 def storage_root() -> Path:
+    """Returns the resolved absolute path to the artifact storage directory,
+    creating it if it does not exist yet."""
     root = Path(settings.artifact_storage_root)
     root.mkdir(parents=True, exist_ok=True)
     return root.resolve()
@@ -40,8 +42,10 @@ async def save_job_file(
 
 
 async def save_job_input_file(job_id: UUID, file: UploadFile) -> tuple[str, int, str]:
+    """Saves a user-uploaded input file under jobs/<job_id>/input/."""
     return await save_job_file(job_id, file, subdir="input")
 
 
 async def save_job_output_file(job_id: UUID, file: UploadFile) -> tuple[str, int, str]:
+    """Saves a runner-produced output file under jobs/<job_id>/output/."""
     return await save_job_file(job_id, file, subdir="output")

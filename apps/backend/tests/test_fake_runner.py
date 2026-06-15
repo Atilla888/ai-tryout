@@ -31,6 +31,7 @@ async def api_client(db_session, configure_test_settings, monkeypatch):
 
 
 async def _create_started_job(client: AsyncClient, db_session) -> str:
+    """Submits and starts a job via the API. Returns the job_id string."""
     user_id, space_id = await _seed_space_and_user(db_session)
     created = await client.post(f"/spaces/{space_id}/jobs", data={"prompt": "fake run"})
     assert created.status_code == 201

@@ -6,6 +6,9 @@ from app.core.config import settings
 async def verify_internal_service_token(
     x_service_token: str | None = Header(default=None, alias="X-Service-Token"),
 ) -> None:
+    """FastAPI dependency for internal endpoints called by the orchestrator/runner.
+    Returns 503 if INTERNAL_SERVICE_TOKEN is not configured server-side, 401 if the header
+    value does not match."""
     if not settings.internal_service_token:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Internal API is not configured (INTERNAL_SERVICE_TOKEN missing)")
     if x_service_token != settings.internal_service_token:

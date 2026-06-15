@@ -2,6 +2,7 @@ import { Outlet, NavLink } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import './Layout.css'
 
+/** Shows the logged-in username + sign-out button, or a sign-in button when not authenticated. */
 function AuthControls() {
   const auth = useAuth()
 
@@ -29,6 +30,7 @@ function AuthControls() {
   )
 }
 
+/** Top-level page shell — renders the nav bar and an Outlet for nested routes. */
 function Layout() {
   return (
     <>

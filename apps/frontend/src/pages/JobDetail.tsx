@@ -12,6 +12,7 @@ import './JobDetail.css'
 
 const POLL_MS = 2000
 
+/** Returns true for terminal job states so the polling interval can be cleared. */
 function jobIsFinished(status: string) {
   return (
     status === 'SUCCEEDED' ||
@@ -21,6 +22,7 @@ function jobIsFinished(status: string) {
   )
 }
 
+/** Maps a job's current state to a user-facing status message. */
 function getMessage(job: Job) {
   if (job.status === 'QUEUED' && job.queue_position != null) {
     return `Position ${job.queue_position} in queue`
@@ -49,6 +51,8 @@ function getMessage(job: Job) {
   return job.status
 }
 
+/** Polls the job status every 2 s until it reaches a terminal state, then loads artifacts.
+ * Sends a browser notification when the job transitions to SUCCEEDED or FAILED. */
 function JobDetail() {
   const { jobId } = useParams()
   const [job, setJob] = useState<Job | null>(null)

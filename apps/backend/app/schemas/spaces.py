@@ -42,6 +42,7 @@ class SpaceDetail(OrmBase):
 
 
 class SpaceCreate(BaseModel):
+    """Request body for POST /creator/spaces. Defaults to PRIVATE visibility and DRAFT status."""
     slug: str
     name: str
     description: str
@@ -56,6 +57,7 @@ class SpaceCreate(BaseModel):
 
 
 class SpaceUpdate(BaseModel):
+    """Partial update body for PATCH /creator/spaces/{id}. All fields are optional."""
     name: str | None = None
     description: str | None = None
     task_type: str | None = None
@@ -69,10 +71,12 @@ class SpaceUpdate(BaseModel):
 
 
 class AdminSpaceUpdate(SpaceUpdate):
+    """Extends SpaceUpdate to allow admins to reassign ownership via owner_id."""
     owner_id: int | None = None
 
 
 class SpaceRead(BaseModel):
+    """Full space representation returned to the creator/admin after write operations."""
     id: UUID = Field(validation_alias="public_id")
     created_at: datetime
     slug: str

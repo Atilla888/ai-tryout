@@ -1,3 +1,5 @@
+"""FastAPI application entry point. Registers all routers and starts the background
+cleanup task that removes expired jobs and artifacts every hour."""
 from contextlib import asynccontextmanager
 
 import asyncio
@@ -52,7 +54,8 @@ async def _cleanup_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    #start background cleanup
+    """Manages application startup and shutdown. Starts the background cleanup loop
+    on startup and cancels it cleanly when the server shuts down."""
     cleanup_task = asyncio.create_task(_cleanup_loop())
 
     api_routes = [r for r in app.routes if getattr(r, "methods", None)]
@@ -87,10 +90,12 @@ app.include_router(internal.router)
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])
 async def health():
+    """Simple liveness probe. Returns ok as long as the process is running."""
     return HealthResponse(status="ok")
 
 
 @app.get("/health-db", tags=["health"])
 async def health_db(db: db_dependency):
+    """Readiness probe that also checks database connectivity by running a trivial query."""
     await db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "active"}

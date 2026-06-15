@@ -1,9 +1,14 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+/** Module-level token store — updated by App.tsx whenever the OIDC session changes. */
 let accessToken: string | null = null
+
+/** Stores the current access token so it can be injected into API requests. */
 export function setAccessToken(token: string | null) {
   accessToken = token
 }
+
+/** Returns Authorization header if logged in, or an empty object for public endpoints. */
 function authHeaders(): Record<string, string> {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
 }
@@ -110,25 +115,30 @@ export interface Me {
   created_at: string
 }
 
+/** Returns the URL for inline preview of an artifact (image/audio/text). */
 export function artifactPreviewUrl(artifactId: string): string {
   return `${BASE_URL}/artifacts/${artifactId}/preview`
 }
 
+/** Returns the URL that triggers a file download (Content-Disposition: attachment). */
 export function artifactDownloadUrl(artifactId: string): string {
   return `${BASE_URL}/artifacts/${artifactId}/download`
 }
 
+/** Fetches the list of all publicly visible spaces. No auth required. */
 export async function fetchSpaces(): Promise<Space[]> {
   const res = await fetch(`${BASE_URL}/spaces`)
   return res.json() as Promise<Space[]>
 }
 
+/** Fetches full detail for a single space including its UI and runner config. */
 export async function fetchSpace(id: string): Promise<SpaceDetail> {
   const res = await fetch(`${BASE_URL}/spaces/${id}`)
   if (!res.ok) throw new Error(`Failed to fetch space: ${res.status}`)
   return res.json() as Promise<SpaceDetail>
 }
 
+/** Submits a job as multipart/form-data (text fields + optional file uploads). */
 export async function submitJob(spaceId: string, payload: FormData): Promise<JobSubmitResponse> {
   const res = await fetch(`${BASE_URL}/spaces/${spaceId}/jobs`, {
     method: 'POST',
@@ -139,12 +149,15 @@ export async function submitJob(spaceId: string, payload: FormData): Promise<Job
   return res.json() as Promise<JobSubmitResponse>
 }
 
+/** Fetches the current state of a job (status, progress, queue position). */
 export async function fetchJob(jobId: string): Promise<Job> {
   const res = await fetch(`${BASE_URL}/jobs/${jobId}`)
   if (!res.ok) throw new Error(`Failed to fetch job: ${res.status}`)
   return res.json() as Promise<Job>
 }
 
+/** Requests cancellation of a running or queued job. The returned job may still show
+ * CANCELLING until the orchestrator acknowledges it. */
 export async function cancelJob(jobId: string): Promise<Job> {
   const res = await fetch(`${BASE_URL}/jobs/${jobId}/cancel`, {
     method: 'POST',
@@ -154,24 +167,28 @@ export async function cancelJob(jobId: string): Promise<Job> {
   return res.json() as Promise<Job>
 }
 
+/** Fetches the profile of the currently logged-in user. */
 export async function fetchMe(): Promise<Me> {
   const res = await fetch(`${BASE_URL}/me`, { headers: authHeaders() })
   if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`)
   return res.json() as Promise<Me>
 }
 
+/** Fetches the job history for the currently logged-in user. */
 export async function fetchMyHistory(): Promise<Job[]> {
   const res = await fetch(`${BASE_URL}/me/history`, { headers: authHeaders() })
   if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`)
   return res.json() as Promise<Job[]>
 }
 
+/** Fetches the output artifacts produced by a job. */
 export async function fetchJobArtifacts(jobId: string): Promise<Artifact[]> {
   const res = await fetch(`${BASE_URL}/jobs/${jobId}/artifacts`)
   if (!res.ok) throw new Error(`Failed to fetch artifacts: ${res.status}`)
   return res.json() as Promise<Artifact[]>
 }
 
+/** Removes a finished job from the current user's history. */
 export async function deleteMyHistory(jobId: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/me/history/${jobId}`, {
     method: 'DELETE',
@@ -232,6 +249,8 @@ export interface ValidationResult {
   errors: FieldError[]
 }
 
+/** Shared fetch wrapper for creator endpoints — injects auth and surfaces the
+ * API's detail message as the thrown error string. */
 async function creatorRequest<T>(url: string, options: RequestInit): Promise<T> {
   const res = await fetch(url, { ...options, headers: { ...authHeaders(), ...options.headers as Record<string,string> } })
   if (!res.ok) {
@@ -241,10 +260,12 @@ async function creatorRequest<T>(url: string, options: RequestInit): Promise<T> 
   return res.json() as Promise<T>
 }
 
+/** Fetches all spaces owned by the current creator. */
 export async function fetchMySpaces(): Promise<CreatorSpace[]> {
   return creatorRequest<CreatorSpace[]>(`${BASE_URL}/creator/spaces`, {})
 }
 
+/** Creates a new space for the current creator. */
 export async function createCreatorSpace(data: SpacePayload): Promise<CreatorSpace> {
   return creatorRequest<CreatorSpace>(`${BASE_URL}/creator/spaces`, {
     method: 'POST',
@@ -253,6 +274,7 @@ export async function createCreatorSpace(data: SpacePayload): Promise<CreatorSpa
   })
 }
 
+/** Partially updates an existing space (only provided fields are changed). */
 export async function updateCreatorSpace(id: string, data: Partial<SpacePayload>): Promise<CreatorSpace> {
   return creatorRequest<CreatorSpace>(`${BASE_URL}/creator/spaces/${id}`, {
     method: 'PATCH',
@@ -261,6 +283,7 @@ export async function updateCreatorSpace(id: string, data: Partial<SpacePayload>
   })
 }
 
+/** Validates a space's config and returns any field-level errors without publishing it. */
 export async function validateCreatorSpace(id: string): Promise<ValidationResult> {
   return creatorRequest<ValidationResult>(`${BASE_URL}/creator/spaces/${id}/validate`, { method: 'POST' })
 }
@@ -286,6 +309,8 @@ export interface AdminSpaceUpdate {
   owner_id?: string
 }
 
+/** Shared fetch wrapper for admin endpoints — injects auth, surfaces the API's
+ * detail message, and handles 204 No Content (e.g. delete) transparently. */
 async function adminRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
     ...options,
@@ -299,10 +324,12 @@ async function adminRequest<T>(url: string, options: RequestInit = {}): Promise<
   return res.json() as Promise<T>
 }
 
+/** Fetches all spaces regardless of owner (admin view). */
 export async function fetchAdminSpaces(): Promise<CreatorSpace[]> {
   return adminRequest<CreatorSpace[]>(`${BASE_URL}/admin/spaces`)
 }
 
+/** Updates a space as admin (can change owner, status, visibility). */
 export async function adminUpdateSpace(id: string, data: AdminSpaceUpdate): Promise<CreatorSpace> {
   return adminRequest<CreatorSpace>(`${BASE_URL}/admin/spaces/${id}`, {
     method: 'PATCH',
@@ -311,10 +338,12 @@ export async function adminUpdateSpace(id: string, data: AdminSpaceUpdate): Prom
   })
 }
 
+/** Permanently deletes a space and all associated jobs/artifacts. */
 export async function adminDeleteSpace(id: string): Promise<void> {
   return adminRequest<void>(`${BASE_URL}/admin/spaces/${id}`, { method: 'DELETE' })
 }
 
+/** Fetches the full user list for the admin dashboard. */
 export async function fetchAdminUsers(): Promise<AdminUser[]> {
   return adminRequest<AdminUser[]>(`${BASE_URL}/admin/users`)
 }

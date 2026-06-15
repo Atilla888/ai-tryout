@@ -16,6 +16,7 @@ JOB_RETENTION_DAYS = 14
 
 
 async def _count_queued_jobs(db: AsyncSession) -> int:
+    """Returns the current number of QUEUED jobs, used to assign the next queue position."""
     result = await db.execute(
         select(func.count()).select_from(Job).where(Job.status == JobStatus.QUEUED.value)
     )
@@ -23,6 +24,8 @@ async def _count_queued_jobs(db: AsyncSession) -> int:
 
 
 async def recalculate_queue_positions(db: AsyncSession) -> None:
+    """Reassigns contiguous queue positions to all QUEUED jobs (sorted by creation time).
+    Called after a job starts or is cancelled so the queue numbers stay sequential."""
     result = await db.execute(
         select(Job)
         .where(Job.status == JobStatus.QUEUED.value)
@@ -41,6 +44,9 @@ async def create_job_service(
     input_payload: dict[str, Any],
     files: dict[str, UploadFile],
 ) -> JobSubmitResponse:
+    """Creates a new QUEUED job, saves any uploaded input files as INPUT artifacts,
+    and patches input_payload with the artifact IDs so the runner can locate the files.
+    The job expires after JOB_RETENTION_DAYS days."""
     now = datetime.now(timezone.utc)
     queue_position = await _count_queued_jobs(db) + 1
 
@@ -87,11 +93,14 @@ async def create_job_service(
 
 
 async def get_job_by_id_service(db: AsyncSession, job_id: UUID) -> Job | None:
+    """Looks up a job by its UUID. Returns None if not found."""
     result = await db.execute(select(Job).where(Job.id == job_id))
     return result.scalar_one_or_none()
 
 
 async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> list[Job]:
+    """Returns all jobs with the given status, ordered by creation time ascending (oldest first).
+    Used by the orchestrator to pick the next QUEUED job."""
     result = await db.execute(
         select(Job).where(Job.status == status.value).order_by(Job.created_at.asc())
     )
@@ -99,6 +108,8 @@ async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> li
 
 
 async def list_jobs_by_user_service(db: AsyncSession, user_id: UUID) -> list[Job]:
+    """Returns all jobs for a user with the associated space eagerly loaded (for space_name),
+    sorted newest first for the history view."""
     result = await db.execute(
         select(Job).options(selectinload(Job.space)).where(Job.user_id == user_id).order_by(Job.created_at.desc())
     )
@@ -106,6 +117,8 @@ async def list_jobs_by_user_service(db: AsyncSession, user_id: UUID) -> list[Job
 
 
 async def start_job_service(db: AsyncSession, job: Job) -> Job:
+    """Transitions a job from QUEUED to STARTING and recalculates queue positions for
+    the remaining queued jobs."""
     ensure_transition(job.status, JobStatus.STARTING)
     job.status = JobStatus.STARTING.value
     job.queue_position = None
@@ -116,6 +129,9 @@ async def start_job_service(db: AsyncSession, job: Job) -> Job:
 
 
 async def cancel_job_service(db: AsyncSession, job: Job) -> Job:
+    """Cancels a job. QUEUED jobs are cancelled immediately; STARTING/RUNNING jobs transition
+    through CANCELLING first. Recalculates queue positions if a queued job was removed.
+    Raises JobTransitionError if the current status does not allow cancellation."""
     now = datetime.now(timezone.utc)
     was_queued = job.status == JobStatus.QUEUED.value
 
@@ -147,6 +163,8 @@ async def update_job_progress_service(
     progress_percent: int,
     message: str | None,
 ) -> Job:
+    """Updates progress on a running job. Implicitly transitions STARTING -> RUNNING on the first
+    progress call (which also sets started_at). Raises JobTransitionError for other statuses."""
     now = datetime.now(timezone.utc)
 
     if job.status == JobStatus.STARTING.value:
@@ -164,6 +182,8 @@ async def update_job_progress_service(
 
 
 async def succeed_job_service(db: AsyncSession, job: Job) -> Job:
+    """Marks the job as SUCCEEDED and sets finished_at. Sets started_at to now as well
+    if the runner skipped the RUNNING state entirely."""
     ensure_transition(job.status, JobStatus.SUCCEEDED)
     now = datetime.now(timezone.utc)
     job.status = JobStatus.SUCCEEDED.value
@@ -184,6 +204,7 @@ async def fail_job_service(
     error_code: str | None,
     error_message: str,
 ) -> Job:
+    """Marks the job as FAILED with an error code and message reported by the runner."""
     ensure_transition(job.status, JobStatus.FAILED)
     now = datetime.now(timezone.utc)
     job.status = JobStatus.FAILED.value
@@ -205,6 +226,8 @@ async def create_output_artifact_service(
     artifact_type: str,
     preview_supported: bool,
 ) -> Artifact:
+    """Saves a runner-produced output file to disk and creates the Artifact record for it.
+    The artifact expires at the same time as the job (JOB_RETENTION_DAYS from now)."""
     storage_path, size_bytes, stored_name = await save_job_output_file(job_id=job.id, file=file)
     expires_at = datetime.now(timezone.utc) + timedelta(days=JOB_RETENTION_DAYS)
 
@@ -228,6 +251,8 @@ async def delete_job_from_history_service(
     job_id: UUID,
     user_id: UUID,
 ) -> None:
+    """Deletes a job and all its artifacts from the database. Raises HTTP 403 if the
+    requesting user does not own the job, 404 if the job does not exist."""
     result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
 

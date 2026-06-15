@@ -22,12 +22,14 @@ const RECENT_RUNS_LIMIT = 5
 const HISTORY_POLL_MS = 3000
 const SECONDS_PER_QUEUE_POSITION = 15
 
+/** Converts a queue position to a rough human-readable time estimate. */
 function formatEta(queuePosition: number): string {
   const seconds = queuePosition * SECONDS_PER_QUEUE_POSITION
   if (seconds < 60) return `~${seconds}s`
   return `~${Math.round(seconds / 60)}m`
 }
 
+/** Returns a status line and progress value for the sidebar queue-status card. */
 function queueStatus(job: Job): { line: string; progress: number } {
   switch (job.status) {
     case 'QUEUED':
@@ -52,6 +54,7 @@ function queueStatus(job: Job): { line: string; progress: number } {
   }
 }
 
+/** Client-side validation of the job submission form. Returns a map of field name → error message. */
 function validateForm(inputs: InputFieldConfig[], values: FormValues): FormErrors {
   const errors: FormErrors = {}
   for (const field of inputs) {
@@ -86,8 +89,6 @@ function validateForm(inputs: InputFieldConfig[], values: FormValues): FormError
   return errors
 }
 
-// --- DropZone ---
-
 interface DropZoneProps {
   field: InputFieldConfig
   value: File | null
@@ -95,6 +96,7 @@ interface DropZoneProps {
   onChange: (file: File | null) => void
 }
 
+/** Drag-and-drop file input that also opens a file picker on click. */
 function DropZone({ field, value, hasError, onChange }: DropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -129,8 +131,6 @@ function DropZone({ field, value, hasError, onChange }: DropZoneProps) {
   )
 }
 
-// --- Field ---
-
 interface FieldProps {
   config: InputFieldConfig
   value: string | File | null
@@ -138,6 +138,7 @@ interface FieldProps {
   onChange: (name: string, val: string | File | null) => void
 }
 
+/** Renders the appropriate input control for a single space input field definition. */
 function Field({ config, value, error, onChange }: FieldProps) {
   const { name, type, label, description, required, placeholder, maxLength, min, max, options } = config
   const hasError = !!error
@@ -233,8 +234,8 @@ function Field({ config, value, error, onChange }: FieldProps) {
   )
 }
 
-// --- Main page ---
-
+/** Space detail page — shows the submission form and a sidebar with queue status and recent runs.
+ * Recent jobs are polled while any of them is in an active state. */
 function Spaces() {
   const { spaceId } = useParams<{ spaceId: string }>()
   const navigate = useNavigate()

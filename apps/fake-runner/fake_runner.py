@@ -20,6 +20,7 @@ STEP_DELAY_SECONDS = 2
 
 
 def _env(name: str) -> str:
+    """Reads a required environment variable and exits the process if it is not set."""
     value = os.environ.get(name, "").strip()
     if not value:
         print(f"Missing required environment variable: {name}", file=sys.stderr)
@@ -28,6 +29,8 @@ def _env(name: str) -> str:
 
 
 def _simulate_failure() -> bool:
+    """Returns True if SIMULATE_FAILURE is set to a truthy value, used in tests to
+    exercise the failure path without a real model."""
     return os.environ.get("SIMULATE_FAILURE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -44,6 +47,8 @@ def _patch_progress(client: httpx.Client, job_id: str, percent: int, message: st
 
 
 def _upload_artifact(client: httpx.Client, job_id: str) -> None:
+    """Uploads dummy_result.txt as the job output artifact. Falls back to a hardcoded
+    string if the file is missing, so tests can run without the file present."""
     dummy_path = Path(__file__).with_name("dummy_result.txt")
     content = dummy_path.read_bytes() if dummy_path.is_file() else b"AI Spaces fake runner output\n"
     response = client.post(
@@ -68,6 +73,9 @@ def _patch_fail(client: httpx.Client, job_id: str) -> None:
 
 
 def run() -> int:
+    """Main runner logic. Sends progress updates, uploads one output artifact, then
+    marks the job as succeeded (or failed if SIMULATE_FAILURE is set).
+    Returns 0 on success, 1 on simulated failure."""
     job_id = _env("JOB_ID")
     api_base_url = _env("API_BASE_URL").rstrip("/")
     token = _env("INTERNAL_SERVICE_TOKEN")

@@ -39,6 +39,7 @@ TEST_SERVICE_TOKEN = "test-internal-token"
 # Patch JSONB → JSON for SQLite compatibility
 # ---------------------------------------------------------------------------
 def _prepare_sqlite_schema() -> None:
+    """Replaces JSONB column types with JSON so SQLite can handle them in tests."""
     if not settings.database_url.startswith("sqlite"):
         return
     for table in Base.metadata.tables.values():
