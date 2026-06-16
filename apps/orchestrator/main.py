@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Poll queued jobs, start them, and spawn the fake model runner subprocess."""
+"""Poll queued jobs, start them, and spawn a model runner subprocess."""
 
 from __future__ import annotations
 
@@ -13,14 +13,10 @@ from pathlib import Path
 
 import httpx
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_RUNNER_SCRIPT = REPO_ROOT / "apps" / "fake-runner" / "fake_runner.py"
-
 ACTIVE_STATUSES = frozenset({"STARTING", "RUNNING"})
 
 
 def _env_int(name: str, default: int) -> int:
-    """Reads an integer from an environment variable, falling back to default if unset."""
     raw = os.environ.get(name, "").strip()
     if not raw:
         return default
@@ -28,8 +24,6 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _env_str(name: str, default: str | None = None) -> str:
-    """Reads a required string from an environment variable. Exits the process if the
-    variable is missing and no default is provided."""
     value = os.environ.get(name, "").strip()
     if value:
         return value
@@ -41,16 +35,12 @@ def _env_str(name: str, default: str | None = None) -> str:
 
 @dataclass
 class RunnerHandle:
-    """Tracks an active runner subprocess alongside its job ID so the orchestrator
-    can poll its exit code and fail the job if it crashes."""
     job_id: str
     process: subprocess.Popen[bytes]
 
 
 @dataclass
 class Orchestrator:
-    """Polls for QUEUED jobs, dispatches them to runner subprocesses, and handles
-    their lifecycle. concurrency_limit caps how many runners run in parallel."""
     api_base_url: str
     service_token: str
     concurrency_limit: int
@@ -73,14 +63,11 @@ class Orchestrator:
         logging.info(message, *args)
 
     def _fetch_queued_jobs(self) -> list[dict]:
-        """Retrieves all QUEUED jobs from the API, ordered oldest-first."""
-        response = self.client.get("/jobs", params={"status": "QUEUED"})
+        response = self.client.get("/internal/jobs", params={"status": "QUEUED"})
         response.raise_for_status()
         return response.json()
 
     def _start_job(self, job_id: str) -> bool:
-        """Tells the API to transition the job to STARTING. Returns False if the API
-        rejects the transition (e.g. another orchestrator already claimed the job)."""
         response = self.client.patch(f"/internal/jobs/{job_id}/start")
         if response.status_code == 409:
             self._log("job=%s start rejected: %s", job_id, response.text)
@@ -90,8 +77,6 @@ class Orchestrator:
         return True
 
     def _spawn_runner(self, job_id: str) -> subprocess.Popen[bytes] | None:
-        """Launches the runner script as a subprocess, injecting JOB_ID and auth credentials
-        via environment variables. Returns None and fails the job if the process cannot start."""
         env = os.environ.copy()
         env.update(
             {
@@ -119,15 +104,13 @@ class Orchestrator:
         return process
 
     def _get_job_status(self, job_id: str) -> str | None:
-        response = self.client.get(f"/jobs/{job_id}")
+        response = self.client.get(f"/internal/jobs/{job_id}")
         if response.status_code == 404:
             return None
         response.raise_for_status()
         return response.json().get("status")
 
     def _fail_job_if_active(self, job_id: str, *, error_code: str, error_message: str) -> None:
-        """Marks the job as FAILED only if it is still in an active state. The status check
-        avoids sending a fail request when the runner already reported success or failure."""
         status = self._get_job_status(job_id)
         if status not in ACTIVE_STATUSES:
             self._log("job=%s skip fail (status=%s)", job_id, status)
@@ -143,8 +126,6 @@ class Orchestrator:
         self._log("job=%s marked FAILED (%s)", job_id, error_code)
 
     def _reap_finished(self) -> None:
-        """Checks all active runner processes for completion. If a process has exited with
-        a non-zero code, the corresponding job is marked FAILED."""
         finished: list[str] = []
         for job_id, handle in self.active.items():
             exit_code = handle.process.poll()
@@ -163,8 +144,6 @@ class Orchestrator:
             del self.active[job_id]
 
     def _dispatch(self) -> None:
-        """Picks the oldest queued job and starts a runner for it if the concurrency limit
-        has not been reached. Starts at most one job per poll cycle."""
         if len(self.active) >= self.concurrency_limit:
             return
 
@@ -187,8 +166,6 @@ class Orchestrator:
         self.active[job_id] = RunnerHandle(job_id=job_id, process=process)
 
     def run_forever(self) -> None:
-        """Main poll loop: reaps finished runners, then dispatches new ones, then sleeps.
-        Terminates all active runners on KeyboardInterrupt for a clean shutdown."""
         self._log(
             "orchestrator started api=%s concurrency=%s poll=%ss runner=%s",
             self.api_base_url,
@@ -215,7 +192,7 @@ def main() -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
 
-    runner_script = Path(os.environ.get("RUNNER_SCRIPT", str(DEFAULT_RUNNER_SCRIPT)))
+    runner_script = Path(_env_str("RUNNER_SCRIPT"))
     if not runner_script.is_file():
         print(f"Runner script not found: {runner_script}", file=sys.stderr)
         sys.exit(1)

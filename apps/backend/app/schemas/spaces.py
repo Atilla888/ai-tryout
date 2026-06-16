@@ -8,7 +8,7 @@ from app.schemas.common import OrmBase
 
 
 class SpaceListItem(OrmBase):
-    """Lightweight space representation for list/card views."""
+    """Short space info for cards and lists."""
 
     id: UUID = Field(validation_alias="public_id")
     public_id: UUID
@@ -23,7 +23,7 @@ class SpaceListItem(OrmBase):
 
 
 class SpaceDetail(OrmBase):
-    """Full space representation including UI and runner config."""
+    """Full space including form and runner config."""
 
     id: UUID = Field(validation_alias="public_id")
     name: str
@@ -42,7 +42,7 @@ class SpaceDetail(OrmBase):
 
 
 class SpaceCreate(BaseModel):
-    """Request body for POST /creator/spaces. Defaults to PRIVATE visibility and DRAFT status."""
+    """Body for creating a space. Starts as private draft unless you say otherwise."""
     slug: str
     name: str
     description: str
@@ -57,7 +57,7 @@ class SpaceCreate(BaseModel):
 
 
 class SpaceUpdate(BaseModel):
-    """Partial update body for PATCH /creator/spaces/{id}. All fields are optional."""
+    """Partial update — only send fields you want to change."""
     name: str | None = None
     description: str | None = None
     task_type: str | None = None
@@ -71,12 +71,12 @@ class SpaceUpdate(BaseModel):
 
 
 class AdminSpaceUpdate(SpaceUpdate):
-    """Extends SpaceUpdate to allow admins to reassign ownership via owner_id."""
+    """Admins can also reassign owner_id."""
     owner_id: int | None = None
 
 
 class SpaceRead(BaseModel):
-    """Full space representation returned to the creator/admin after write operations."""
+    """Space JSON after a create or update."""
     id: UUID = Field(validation_alias="public_id")
     created_at: datetime
     slug: str
@@ -92,4 +92,4 @@ class SpaceRead(BaseModel):
     status: str
     owner_id: int
 
-    model_config = ConfigDict(from_attributes= True)
+    model_config = ConfigDict(from_attributes=True)

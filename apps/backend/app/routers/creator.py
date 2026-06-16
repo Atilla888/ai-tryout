@@ -6,13 +6,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps.auth import require_role
+from app.core.auth import require_role
 from app.db.models import User
 from app.schemas.spaces import SpaceCreate, SpaceDetail, SpaceUpdate
 from app.schemas.validation import ValidationResult
 from app.services.spaces import (
     create_space_service,
-    get_space_by_id_service,
+    get_space_by_public_id_service,
     list_spaces_by_owner_service,
     update_space_service,
 )
@@ -26,7 +26,7 @@ CreatorUser = Annotated[User, Depends(require_role("space_creator", "admin"))]
 
 @router.post("/spaces", response_model=SpaceDetail, status_code=status.HTTP_201_CREATED)
 async def create_space(body: SpaceCreate, db: db_dependency, creator: CreatorUser):
-    """Create a new space owned by the authenticated creator."""
+    """New space for the logged-in creator."""
     try:
         return await create_space_service(db=db, data=body, owner_id=creator.id)
     except IntegrityError:
@@ -39,14 +39,14 @@ async def create_space(body: SpaceCreate, db: db_dependency, creator: CreatorUse
 
 @router.get("/spaces", response_model=list[SpaceDetail])
 async def list_my_spaces(db: db_dependency, creator: CreatorUser):
-    """Return all spaces owned by the authenticated creator."""
+    """Spaces this creator owns."""
     return await list_spaces_by_owner_service(db=db, owner_id=creator.id)
 
 
 @router.patch("/spaces/{space_id}", response_model=SpaceDetail)
 async def update_space(space_id: UUID, body: SpaceUpdate, db: db_dependency, creator: CreatorUser):
-    """Update metadata or configuration for an owned space."""
-    space = await get_space_by_id_service(db=db, space_id=space_id)
+    """Patch a space you own."""
+    space = await get_space_by_public_id_service(db=db, public_id=space_id)
     if space is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Space not found")
     if space.owner_id != creator.id:
@@ -56,8 +56,8 @@ async def update_space(space_id: UUID, body: SpaceUpdate, db: db_dependency, cre
 
 @router.post("/spaces/{space_id}/validate", response_model=ValidationResult)
 async def validate_space_config_route(space_id: UUID, db: db_dependency, creator: CreatorUser):
-    """Validate the space configuration and runner contract before publishing."""
-    space = await get_space_by_id_service(db=db, space_id=space_id)
+    """Check ui_config and runner_config before publish."""
+    space = await get_space_by_public_id_service(db=db, public_id=space_id)
     if space is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Space not found")
     if space.owner_id != creator.id:

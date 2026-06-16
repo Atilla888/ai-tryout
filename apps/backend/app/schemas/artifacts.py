@@ -1,13 +1,12 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 
 class ArtifactRead(BaseModel):
-    """Artifact metadata returned by the API. storage_path is included so a client could
-    reconstruct paths, but the canonical way to access files is via the /preview and /download endpoints."""
-    id: UUID = Field(validation_alias="public_id")
+    """File metadata for the public API. Download and preview use separate routes."""
+    id: UUID
     artifact_type: str
     file_name: str
     content_type: str
@@ -16,6 +15,4 @@ class ArtifactRead(BaseModel):
     preview_supported: bool
     created_at: datetime
     expires_at: datetime | None
-    job_id: int
-
-    model_config = ConfigDict(from_attributes=True)
+    job_id: UUID

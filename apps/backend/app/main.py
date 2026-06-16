@@ -24,8 +24,8 @@ OPENAPI_TAGS = [
     {"name": "artifacts", "description": "Preview and download job output files"},
     {"name": "internal", "description": "Runner/orchestrator callbacks (requires service token)"},
     {"name": "me", "description": "Current user profile and job history"},
-    {"name": "admin", "description": "Administration (stubs)"},
-    {"name": "creator", "description": "Space creator and manager (stubs)"},
+    {"name": "admin", "description": "Administration"},
+    {"name": "creator", "description": "Space creator and manager"},
 ]
 
 CLEANUP_INTERVAL_SECONDS = 3600  # 1 hour
@@ -36,9 +36,14 @@ async def cleanup_expired_artifacts() -> None:
     now = datetime.now(timezone.utc)
     async with AsyncSessionLocal() as db:
         #delete expired artifacts first
-        await db.execute(delete(Artifact).where(Artifact.expires_at < now))
-        # Delete jobs with no remaining artifacts that are also expired
-        await db.execute(delete(Job).where(Job.expires_at < now))
+        await db.execute(
+            delete(Artifact).where(Artifact.expires_at < now),
+            execution_options={"synchronize_session": False},
+        )
+        await db.execute(
+            delete(Job).where(Job.expires_at < now),
+            execution_options={"synchronize_session": False},
+        )
         await db.commit()
     print(f"[cleanup] Expired artifacts and jobs cleaned up at {now.isoformat()}")
 

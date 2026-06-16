@@ -9,7 +9,7 @@ from app.db.session import get_db
 from app.services.artifacts import (
     artifact_absolute_path,
     ensure_artifact_available,
-    get_artifact_by_id_service,
+    get_artifact_by_public_id_service,
 )
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
@@ -19,9 +19,8 @@ db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 @router.get("/{artifact_id}/preview")
 async def preview_artifact(db: db_dependency, artifact_id: UUID) -> FileResponse:
-    """Serves the artifact file inline so the browser can display it (images, audio, text).
-    Returns 404 if the artifact is expired or the file is missing from storage."""
-    artifact = await get_artifact_by_id_service(db, artifact_id)
+    """Serve the file inline so the browser can show it."""
+    artifact = await get_artifact_by_public_id_service(db, artifact_id)
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
 
@@ -40,9 +39,8 @@ async def preview_artifact(db: db_dependency, artifact_id: UUID) -> FileResponse
 
 @router.get("/{artifact_id}/download")
 async def download_artifact(db: db_dependency, artifact_id: UUID) -> FileResponse:
-    """Serves the artifact as an attachment (Content-Disposition: attachment) so the browser
-    triggers a file download instead of displaying the content inline."""
-    artifact = await get_artifact_by_id_service(db, artifact_id)
+    """Same file as preview, but as a download attachment."""
+    artifact = await get_artifact_by_public_id_service(db, artifact_id)
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
 

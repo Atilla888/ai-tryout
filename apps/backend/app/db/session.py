@@ -7,8 +7,7 @@ AsyncSessionLocal = async_sessionmaker(bind=async_engine, class_=AsyncSession, e
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Yields a database session for FastAPI dependency injection.
-    The session is automatically rolled back on error and closed when the request finishes."""
+    """One DB session per request; rolls back on error."""
     async with AsyncSessionLocal() as session:
         try:
             yield session

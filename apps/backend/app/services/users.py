@@ -6,7 +6,7 @@ from app.db.models import User
 
 
 async def list_users_service(db: AsyncSession) -> list[User]:
-    """Returns all registered users ordered by their registration date."""
+    """Everyone who has logged in at least once, oldest first."""
     result = await db.execute(select(User).order_by(User.created_at))
     return list(result.scalars().all())
 
@@ -17,8 +17,7 @@ async def get_user_by_subject_service(
     subject_id: str,
     idp: str,
 ) -> User | None:
-    """Looks up a user by their IdP subject_id. Returns None if they have never logged in before.
-    idp is always 'keycloak' for now but kept for future multi-IdP support."""
+    """Look up someone by their IdP subject. None if they never signed in before."""
     result = await db.execute(
         select(User).where(
             User.subject_id == subject_id,
@@ -37,7 +36,7 @@ async def get_or_create_user_service(
     role: str,
     idp: str = "keycloak",
 ) -> User:
-    """Just-in-time provisioning: first valid token from a new subject creates a user row."""
+    """First login creates the row; later logins just return the existing user."""
 
     user = await get_user_by_subject_service(
         db,
@@ -61,6 +60,7 @@ async def get_or_create_user_service(
     try:
         await db.commit()
     except IntegrityError:
+        # Another request may have created the same user at the same time.
         await db.rollback()
 
         existing = await get_user_by_subject_service(

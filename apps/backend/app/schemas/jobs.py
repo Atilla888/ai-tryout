@@ -2,12 +2,11 @@ from datetime import datetime
 from uuid import UUID
 
 from enum import StrEnum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class JobStatus(StrEnum):
-    """All possible states in the job lifecycle. CANCELLING is a transient state while
-    the runner is notified; it should quickly move to CANCELLED."""
+    """Where a job is in its life. CANCELLING is brief — we move to CANCELLED right after."""
     QUEUED = "QUEUED"
     STARTING = "STARTING"
     RUNNING = "RUNNING"
@@ -34,18 +33,15 @@ ACTIVE_JOB_STATUSES = frozenset({
 
 
 class JobSubmitResponse(BaseModel):
-    """Returned immediately after a job is created so the frontend can navigate to the job page."""
-    id: int
-    public_id: UUID
+    """Right after submit — enough for the UI to open the job page."""
+    id: UUID
     status: JobStatus
     queue_position: int | None = None
 
 
 class JobRead(BaseModel):
-    """Full job representation returned by the polling and history endpoints.
-    space_name is denormalized here to avoid a second request from the frontend."""
-    id: int
-    public_id: UUID
+    """Full job for polling and history. Uses public UUIDs throughout."""
+    id: UUID
     status: JobStatus
     progress_percent: int
     progress_message: str | None
@@ -57,11 +53,9 @@ class JobRead(BaseModel):
     finished_at: datetime | None
     cancelled_at: datetime | None = None
     expires_at: datetime | None
-    space_id: int
+    space_id: UUID
     space_name: str | None = None
-    user_id: int
-
-    model_config = {"from_attributes": True}
+    user_id: UUID
 
 
 class JobCreate(BaseModel):

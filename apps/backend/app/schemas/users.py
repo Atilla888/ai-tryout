@@ -5,8 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserRead(BaseModel):
-    """User profile returned by the /me endpoint. The internal integer id is hidden;
-    the public UUID is exposed as 'id'."""
+    """Profile for GET /me. The id field is the public UUID, not the database row id."""
     id: UUID = Field(validation_alias="public_id")
     subject_id: str
     idp: str

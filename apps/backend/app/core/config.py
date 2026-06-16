@@ -1,5 +1,3 @@
-# only job is to read values from .env
-
 from pathlib import Path
 
 from pydantic import AliasChoices, Field
@@ -8,19 +6,27 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _CONFIG_FILE = Path(__file__).resolve()
 
-# Local monorepo path:
-# ai-spaces/apps/backend/app/core/config.py
-# parents[4] = ai-spaces
-_REPO_ROOT = _CONFIG_FILE.parents[4] if len(_CONFIG_FILE.parents) > 4 else Path.cwd()
+
+def _find_repo_root(start: Path) -> Path:
+    """Walk up until we hit the folder with docker-compose.yml or .env."""
+    for candidate in (start, *start.parents):
+        if (candidate / "docker-compose.yml").is_file() or (candidate / ".env").is_file():
+            return candidate
+    return start
+
+
+_REPO_ROOT = _find_repo_root(_CONFIG_FILE.parent)
 _ENV_FILE = _REPO_ROOT / ".env"
 
 
 class Settings(BaseSettings):
-    """Reads all configuration from environment variables or the monorepo .env file.
-    AUTH_PROVIDER should be 'oidc' in production; it defaults to 'dev' which bypasses
-    Keycloak entirely so the app can run locally without an IdP."""
+    """App settings from the environment and the repo-root .env file.
+
+    In Docker, Compose usually injects the same values so we do not need the file
+    inside the container.
+    """
     model_config = SettingsConfigDict(
-        env_file=_ENV_FILE if _ENV_FILE.exists() else None,
+        env_file=_ENV_FILE if _ENV_FILE.is_file() else None,
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -41,6 +47,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("INTERNAL_SERVICE_TOKEN"),
     )
 
+    # dev = no Keycloak; oidc = validate Keycloak JWTs
     auth_provider: str = Field(
         default="dev",
         validation_alias=AliasChoices("AUTH_PROVIDER"),

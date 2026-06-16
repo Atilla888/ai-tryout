@@ -1,5 +1,5 @@
-# Model runner templates
+# Model runner template
 
-Place for Dockerfiles and entrypoints for real per-space model images later, when jobs run on Kubernetes.
+Placeholder for the standard model container / runner contract used in Sprint 2.
 
-Sprint 1 testing uses `apps/fake-runner/` instead of anything in this folder.
+Implement runners here and point the orchestrator at them with `RUNNER_SCRIPT`.

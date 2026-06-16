@@ -7,15 +7,14 @@ from app.core.config import settings
 
 
 def storage_root() -> Path:
-    """Returns the resolved absolute path to the artifact storage directory,
-    creating it if it does not exist yet."""
+    """Root folder for uploaded files; created on first use."""
     root = Path(settings.artifact_storage_root)
     root.mkdir(parents=True, exist_ok=True)
     return root.resolve()
 
 
 def resolve_storage_path(relative_path: str) -> Path:
-    """Resolve a DB-relative path under ARTIFACT_STORAGE_ROOT; block traversal."""
+    """Turn a stored relative path into an absolute one, and block path traversal."""
     root = storage_root()
     full = (root / relative_path).resolve()
     if not str(full).startswith(str(root)):
@@ -29,7 +28,7 @@ async def save_job_file(
     *,
     subdir: str,
 ) -> tuple[str, int, str]:
-    """Write file under jobs/<job_id>/<subdir>/; return relative storage_path."""
+    """Write under jobs/<job_id>/<subdir>/ and return path, size, and filename."""
     safe_name = Path(file.filename or "upload").name or "upload"
     relative = Path("jobs") / str(job_id) / subdir / safe_name
     absolute = storage_root() / relative
@@ -42,10 +41,8 @@ async def save_job_file(
 
 
 async def save_job_input_file(job_id: UUID, file: UploadFile) -> tuple[str, int, str]:
-    """Saves a user-uploaded input file under jobs/<job_id>/input/."""
     return await save_job_file(job_id, file, subdir="input")
 
 
 async def save_job_output_file(job_id: UUID, file: UploadFile) -> tuple[str, int, str]:
-    """Saves a runner-produced output file under jobs/<job_id>/output/."""
     return await save_job_file(job_id, file, subdir="output")

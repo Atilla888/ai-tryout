@@ -2,10 +2,11 @@ from app.schemas.jobs import JobStatus
 
 
 class JobTransitionError(ValueError):
-    """Raised when an attempted job status transition is not allowed by the state machine."""
+    """Someone tried to move a job to a status we do not allow."""
     pass
 
 
+# Allowed moves from each status. Empty set means the job is done.
 _ALLOWED: dict[JobStatus, set[JobStatus]] = {
     JobStatus.QUEUED: {JobStatus.STARTING, JobStatus.CANCELLED},
     JobStatus.STARTING: {JobStatus.RUNNING, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.CANCELLING},
@@ -19,8 +20,7 @@ _ALLOWED: dict[JobStatus, set[JobStatus]] = {
 
 
 def ensure_transition(current: str, new: JobStatus) -> None:
-    """Checks that transitioning from current to new is valid. Raises JobTransitionError
-    if the transition is not listed in _ALLOWED, preventing illegal state changes."""
+    """Raise JobTransitionError if this status change is not allowed."""
     try:
         current_status = JobStatus(current)
     except ValueError as exc:

@@ -1,12 +1,10 @@
-"""Authentication layer.
+"""Login and identity.
 
-A single integration point — `get_current_user()` — sits behind an
-`AuthProvider` interface so the underlying identity system can be swapped
-(Keycloak/OIDC now, Shibboleth later) without touching route code.
+Routes call get_current_user(). Behind that sits an AuthProvider so we can swap
+Keycloak for something else later without rewriting every endpoint.
 
-Providers turn the incoming `Authorization` header into normalized claims;
-`get_current_user` then maps those claims to a row in the `users` table
-(just-in-time provisioning) and returns the ORM `User`.
+Each provider reads the Authorization header and returns the same claim shape.
+get_current_user then finds or creates the matching users row and returns it.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -24,7 +22,7 @@ from app.services.users import get_or_create_user_service
 
 @dataclass
 class NormalizedClaims:
-    """Identity fields every provider must produce, regardless of IdP format."""
+    """What every identity provider has to give us, no matter how their tokens look."""
     subject_id: str
     email: str
     display_name: str | None = None
@@ -34,12 +32,11 @@ class NormalizedClaims:
 class AuthProvider(ABC):
     @abstractmethod
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
-        """Validate the Authorization header and return normalized claims, or raise 401."""
+        """Check the header and return claims, or raise 401."""
 
 
 def _bearer_token(authorization: str | None) -> str:
-    """Extracts the raw token string from 'Bearer <token>'. Raises 401 if the header is missing
-    or malformed."""
+    """Pull the token out of a Bearer header."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,11 +47,10 @@ def _bearer_token(authorization: str | None) -> str:
 
 
 class OIDCAuthProvider(AuthProvider):
-    """Validates Keycloak-issued JWT access tokens against the realm JWKS."""
+    """Check access tokens from Keycloak using the realm public keys."""
 
     def __init__(self) -> None:
-        # PyJWKClient fetches the realm's public keys and caches them,
-        # refreshing automatically when Keycloak rotates signing keys.
+        # PyJWKClient caches keys and refreshes when Keycloak rotates them.
         self._jwks_client = jwt.PyJWKClient(settings.oidc_jwks_url)
 
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
@@ -88,11 +84,7 @@ class OIDCAuthProvider(AuthProvider):
 
 
 class DevAuthProvider(AuthProvider):
-    """Local development: no Keycloak needed. Returns a fixed admin user.
-
-    Lets you exercise protected routes from Swagger/tests without a running IdP.
-    Never use in production (AUTH_PROVIDER=oidc there).
-    """
+    """Skip Keycloak locally and pretend everyone is an admin."""
 
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
         return NormalizedClaims(
@@ -104,19 +96,16 @@ class DevAuthProvider(AuthProvider):
 
 
 def _build_provider() -> AuthProvider:
-    """Selects the auth provider based on AUTH_PROVIDER env var. Defaults to DevAuthProvider
-    so the server starts without any OIDC configuration in local development."""
     if settings.auth_provider == "oidc":
         return OIDCAuthProvider()
     return DevAuthProvider()
 
 
-# One provider instance for the process (JWKS cache lives here).
 auth_provider: AuthProvider = _build_provider()
 
 
 def map_realm_roles_to_role(realm_roles: list[str]) -> str:
-    """Collapse Keycloak realm roles into the single platform role we store."""
+    """Keycloak can send many realm roles; we store one app role per user."""
     if "admin" in realm_roles:
         return "admin"
     if "space_creator" in realm_roles:
@@ -143,7 +132,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def require_role(*allowed_roles: str):
-    """Dependency factory: allow the route only for the given platform roles."""
+    """Only let through users who have one of the given roles."""
 
     async def _checker(user: CurrentUser) -> User:
         if user.role not in allowed_roles:
