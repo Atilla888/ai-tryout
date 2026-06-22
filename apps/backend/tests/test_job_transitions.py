@@ -12,6 +12,7 @@ from app.services.jobs import (
     cancel_job_service,
     create_job_service,
     fail_job_service,
+    finalize_cancellation_service,
     list_jobs_by_status_service,
     recalculate_queue_positions,
     start_job_service,
@@ -91,14 +92,22 @@ async def test_queued_job_cancel_is_immediate(db_session):
 
 @pytest.mark.asyncio
 async def test_running_job_cancel_goes_through_cancelling(db_session):
+    """Running jobs stop at CANCELLING; the orchestrator finalizes to CANCELLED (D2)."""
     user_id, space_id = await _seed_space_and_user(db_session)
     created = await create_job_service(db_session, space_id, user_id, {}, {})
     job = await db_session.get(Job, created.id)
     await start_job_service(db_session, job)
     await db_session.refresh(job)
     await update_job_progress_service(db_session, job, progress_percent=10, message="working")
-    cancelled = await cancel_job_service(db_session, job)
+
+    cancelling = await cancel_job_service(db_session, job)
+    assert cancelling.status == JobStatus.CANCELLING.value
+    assert cancelling.cancelled_at is not None
+
+    # Orchestrator confirms the worker is gone -> CANCELLED.
+    cancelled = await finalize_cancellation_service(db_session, job)
     assert cancelled.status == JobStatus.CANCELLED.value
+    assert cancelled.finished_at is not None
 
 
 @pytest.mark.asyncio

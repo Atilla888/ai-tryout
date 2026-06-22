@@ -8,8 +8,9 @@ from httpx import AsyncClient
 from sqlalchemy import insert, select
 
 from app.db.models import Artifact, Job, Space, User
+from app.schemas.jobs import JobStatus
 from app.services.jobs import delete_job_from_history_service, list_jobs_by_user_service
-from app.main import cleanup_expired_artifacts
+from app.main import run_cleanup_once
 
 
 # helpers 
@@ -205,10 +206,8 @@ async def test_delete_job_also_removes_artifacts(db_session):
 
 
 @pytest.mark.asyncio
-async def test_cleanup_removes_expired_artifacts(db_session, monkeypatch):
-    """Cleanup task must delete artifacts and jobs where expires_at has passed."""
-    from app.db import AsyncSessionLocal
-
+async def test_cleanup_expires_jobs_and_removes_artifacts(db_session, monkeypatch):
+    """Cleanup marks expired jobs as EXPIRED (D3) and removes their artifact rows."""
     past = datetime.now(timezone.utc) - timedelta(days=1)
     user_id, _, job_id = await _seed_user_space_job(db_session, expires_at=past)
     artifact_id = await _seed_artifact(db_session, job_id=job_id, expires_at=past)
@@ -219,18 +218,20 @@ async def test_cleanup_removes_expired_artifacts(db_session, monkeypatch):
         lambda: db_session,
     )
 
-    await cleanup_expired_artifacts()
+    await run_cleanup_once()
 
     art = await db_session.execute(select(Artifact).where(Artifact.id == artifact_id))
     assert art.scalar_one_or_none() is None
 
     job = await db_session.execute(select(Job).where(Job.id == job_id))
-    assert job.scalar_one_or_none() is None
+    expired_job = job.scalar_one_or_none()
+    assert expired_job is not None
+    assert expired_job.status == JobStatus.EXPIRED.value
 
 
 @pytest.mark.asyncio
 async def test_cleanup_keeps_non_expired(db_session, monkeypatch):
-    """Cleanup task must NOT delete artifacts that are still valid."""
+    """Cleanup must NOT touch jobs/artifacts that are still valid."""
     future = datetime.now(timezone.utc) + timedelta(days=10)
     user_id, _, job_id = await _seed_user_space_job(db_session, expires_at=future)
     artifact_id = await _seed_artifact(db_session, job_id=job_id, expires_at=future)
@@ -240,7 +241,12 @@ async def test_cleanup_keeps_non_expired(db_session, monkeypatch):
         lambda: db_session,
     )
 
-    await cleanup_expired_artifacts()
+    await run_cleanup_once()
 
     art = await db_session.execute(select(Artifact).where(Artifact.id == artifact_id))
     assert art.scalar_one_or_none() is not None
+
+    job = await db_session.execute(select(Job).where(Job.id == job_id))
+    kept_job = job.scalar_one_or_none()
+    assert kept_job is not None
+    assert kept_job.status != JobStatus.EXPIRED.value

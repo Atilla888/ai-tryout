@@ -1,0 +1,44 @@
+{
+  "slug": "reference-echo",
+  "name": "Reference Echo Space",
+  "description": "Reference space that echoes the prompt and any uploaded files. Use it as a template for a real model space.",
+  "task_type": "text",
+  "input_types": ["text", "image"],
+  "output_types": ["text"],
+  "container_image": "ai-spaces-base:latest",
+  "visibility": "PUBLIC",
+  "status": "DRAFT",
+  "runner_config": {
+    "version": 1,
+    "resource_profile": "cpu-small",
+    "timeout_seconds": 1200
+  },
+  "ui_config": {
+    "version": 1,
+    "inputs": [
+      {
+        "name": "prompt",
+        "type": "text",
+        "label": "Prompt",
+        "required": true,
+        "placeholder": "Describe what you want…",
+        "maxLength": 500
+      },
+      {
+        "name": "reference_image",
+        "type": "file",
+        "label": "Reference image",
+        "required": false,
+        "mime_types": ["image/png", "image/jpeg"],
+        "max_size_mb": 10
+      }
+    ],
+    "outputs": [
+      {
+        "name": "result",
+        "type": "text",
+        "label": "Result"
+      }
+    ]
+  }
+}

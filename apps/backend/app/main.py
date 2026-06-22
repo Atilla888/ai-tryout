@@ -1,19 +1,18 @@
 """FastAPI application entry point. Registers all routers and starts the background
-cleanup task that removes expired jobs and artifacts every hour."""
+cleanup task that expires old jobs and removes their artifact files every hour."""
 from contextlib import asynccontextmanager
 
 import asyncio
-from datetime import datetime, timezone
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text, delete
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
 from app.db.session import get_db, AsyncSessionLocal
 from app.routers import admin, artifacts, creator, internal, jobs, me, spaces
 from app.schemas.common import HealthResponse
-from app.db.models import Artifact, Job
+from app.services.maintenance import cleanup_expired_jobs_and_artifacts
 
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
@@ -31,28 +30,21 @@ OPENAPI_TAGS = [
 CLEANUP_INTERVAL_SECONDS = 3600  # 1 hour
 
 
-async def cleanup_expired_artifacts() -> None:
-    """Delete artifact records (and their jobs) where expires_at has passed."""
-    now = datetime.now(timezone.utc)
+async def run_cleanup_once() -> None:
+    """Mark expired jobs EXPIRED and delete their artifact files from disk (D3)."""
     async with AsyncSessionLocal() as db:
-        #delete expired artifacts first
-        await db.execute(
-            delete(Artifact).where(Artifact.expires_at < now),
-            execution_options={"synchronize_session": False},
-        )
-        await db.execute(
-            delete(Job).where(Job.expires_at < now),
-            execution_options={"synchronize_session": False},
-        )
-        await db.commit()
-    print(f"[cleanup] Expired artifacts and jobs cleaned up at {now.isoformat()}")
+        result = await cleanup_expired_jobs_and_artifacts(db)
+    print(
+        f"[cleanup] expired {result.jobs_expired} job(s), "
+        f"removed {result.artifacts_removed} artifact file(s)"
+    )
 
 
 async def _cleanup_loop() -> None:
-    """Background loop: runs cleanup every hour."""
+    """Background loop: runs the expiration cleanup every hour."""
     while True:
         try:
-            await cleanup_expired_artifacts()
+            await run_cleanup_once()
         except Exception as exc:
             print(f"[cleanup] Error during cleanup: {exc}")
         await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)

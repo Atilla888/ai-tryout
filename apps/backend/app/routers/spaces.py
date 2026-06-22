@@ -9,7 +9,7 @@ from app.core.auth import require_role
 from app.db.models import User
 from app.db.session import get_db
 from app.schemas.spaces import SpaceCreate, SpaceRead
-from app.services.spaces import create_space_service, get_space_by_public_id_service, list_spaces_service
+from app.services.spaces import create_space_service, get_space_by_public_id_service, list_public_spaces_service
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
@@ -27,7 +27,8 @@ async def create_space(db: db_dependency, data: SpaceCreate, creator: CreatorUse
 
 @router.get("", response_model=list[SpaceRead], status_code=status.HTTP_200_OK)
 async def get_spaces(db: db_dependency):
-    return await list_spaces_service(db)
+    """Public Space Hub catalog — only published, public spaces (D1)."""
+    return await list_public_spaces_service(db)
 
 
 @router.get("/{space_id}", response_model=SpaceRead, status_code=status.HTTP_200_OK)

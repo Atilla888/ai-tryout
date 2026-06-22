@@ -67,6 +67,27 @@ services:
       - ./apps/backend:/app
       - storage_data:/app/storage
 
+  orchestrator:
+    build:
+      context: ./apps/orchestrator
+      dockerfile: Dockerfile
+    image: ai-spaces-orchestrator:dev
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: http://backend:8000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-changeme-internal-token}
+      # subprocess backend runs the bundled reference/fake runner; switch to
+      # "kubernetes" (with cluster access + K8S_NAMESPACE) for real workloads.
+      RUNNER_BACKEND: ${RUNNER_BACKEND:-subprocess}
+      RUNNER_SCRIPT: /app/fake_runner.py
+      CONCURRENCY_LIMIT: "2"
+      POLL_INTERVAL_SECONDS: "3"
+    depends_on:
+      backend:
+        condition: service_started
+    volumes:
+      - ./apps/orchestrator:/app
+
 volumes:
   postgres_data:
   storage_data:

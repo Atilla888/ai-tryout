@@ -4,6 +4,10 @@ from app.schemas.spaces import SpaceCreate, SpaceUpdate
 from app.db.models import Artifact, Job, Space
 from uuid import UUID
 
+# A space only shows up in the public catalog when it is both published and public.
+PUBLISHED_STATUS = "PUBLISHED"
+PUBLIC_VISIBILITY = "PUBLIC"
+
 
 async def create_space_service(db: AsyncSession, data: SpaceCreate, owner_id: int):
     space = Space(
@@ -29,7 +33,24 @@ async def create_space_service(db: AsyncSession, data: SpaceCreate, owner_id: in
 
 
 async def list_spaces_service(db: AsyncSession):
+    """Every space, no filtering. For admin/internal use only."""
     result = await db.execute(select(Space))
+    return list(result.scalars().all())
+
+
+async def list_public_spaces_service(db: AsyncSession):
+    """The public catalog: only published spaces with public visibility.
+
+    Draft/disabled or private spaces never leak into the anonymous Space Hub
+    (US-01, spec 3.4). Creators and admins see broader results through their own
+    scoped endpoints (`/creator/spaces`, `/admin/spaces`).
+    """
+    result = await db.execute(
+        select(Space).where(
+            Space.status == PUBLISHED_STATUS,
+            Space.visibility == PUBLIC_VISIBILITY,
+        )
+    )
     return list(result.scalars().all())
 
 

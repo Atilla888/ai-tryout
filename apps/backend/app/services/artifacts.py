@@ -37,6 +37,18 @@ async def list_artifacts_by_job_id_service(
     return list(result.scalars().all())
 
 
+async def list_input_artifacts_by_job_id_service(
+    db: AsyncSession, job_id: int
+) -> list[Artifact]:
+    """INPUT artifacts only — what a runner downloads before inference (D4)."""
+    result = await db.execute(
+        select(Artifact)
+        .where(Artifact.job_id == job_id, Artifact.artifact_type == "INPUT")
+        .order_by(Artifact.created_at)
+    )
+    return list(result.scalars().all())
+
+
 def artifact_absolute_path(artifact: Artifact) -> Path:
     return resolve_storage_path(artifact.storage_path)
 

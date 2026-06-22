@@ -1,18 +1,28 @@
 #!/usr/bin/env python3
-"""Poll queued jobs, start them, and spawn a model runner subprocess."""
+"""Poll queued jobs, start them, and run a model runner through a runner backend.
+
+The orchestrator is intentionally thin: it claims queued jobs, asks the backend
+for the execution data, and hands off to a runner backend (local subprocess or a
+Kubernetes Job — see ``runner_backends.py``). It also drives real cancellation:
+when a job is CANCELLING it terminates the worker and finalizes the job to
+CANCELLED (D2).
+"""
 
 from __future__ import annotations
 
 import logging
 import os
-import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import httpx
 
+from runner_backends import RunnerBackend, build_runner_backend
+
+# Statuses where it still makes sense to mark a job FAILED if its worker dies.
 ACTIVE_STATUSES = frozenset({"STARTING", "RUNNING"})
 
 
@@ -36,7 +46,7 @@ def _env_str(name: str, default: str | None = None) -> str:
 @dataclass
 class RunnerHandle:
     job_id: str
-    process: subprocess.Popen[bytes]
+    handle: Any
 
 
 @dataclass
@@ -45,7 +55,7 @@ class Orchestrator:
     service_token: str
     concurrency_limit: int
     poll_interval_seconds: float
-    runner_script: Path
+    backend: RunnerBackend
     client: httpx.Client = field(init=False, repr=False)
     active: dict[str, RunnerHandle] = field(default_factory=dict)
 
@@ -62,8 +72,17 @@ class Orchestrator:
     def _log(self, message: str, *args: object) -> None:
         logging.info(message, *args)
 
-    def _fetch_queued_jobs(self) -> list[dict]:
-        response = self.client.get("/internal/jobs", params={"status": "QUEUED"})
+    # --- backend API helpers -------------------------------------------------
+
+    def _fetch_jobs(self, status: str) -> list[dict]:
+        response = self.client.get("/internal/jobs", params={"status": status})
+        response.raise_for_status()
+        return response.json()
+
+    def _fetch_execution_data(self, job_id: str) -> dict | None:
+        response = self.client.get(f"/internal/jobs/{job_id}/execution-data")
+        if response.status_code == 404:
+            return None
         response.raise_for_status()
         return response.json()
 
@@ -75,33 +94,6 @@ class Orchestrator:
         response.raise_for_status()
         self._log("job=%s transitioned to STARTING", job_id)
         return True
-
-    def _spawn_runner(self, job_id: str) -> subprocess.Popen[bytes] | None:
-        env = os.environ.copy()
-        env.update(
-            {
-                "JOB_ID": job_id,
-                "API_BASE_URL": self.api_base_url,
-                "INTERNAL_SERVICE_TOKEN": self.service_token,
-            }
-        )
-        try:
-            process = subprocess.Popen(
-                [sys.executable, str(self.runner_script)],
-                env=env,
-                cwd=self.runner_script.parent,
-            )
-        except OSError as exc:
-            self._log("job=%s failed to spawn runner: %s", job_id, exc)
-            self._fail_job_if_active(
-                job_id,
-                error_code="RUNNER_SPAWN_ERROR",
-                error_message=str(exc),
-            )
-            return None
-
-        self._log("job=%s spawned runner pid=%s", job_id, process.pid)
-        return process
 
     def _get_job_status(self, job_id: str) -> str | None:
         response = self.client.get(f"/internal/jobs/{job_id}")
@@ -125,29 +117,73 @@ class Orchestrator:
         response.raise_for_status()
         self._log("job=%s marked FAILED (%s)", job_id, error_code)
 
+    def _finalize_cancel(self, job_id: str) -> None:
+        response = self.client.patch(f"/internal/jobs/{job_id}/cancelled")
+        if response.status_code in (404, 409):
+            self._log("job=%s finalize cancel skipped: %s", job_id, response.text)
+            return
+        response.raise_for_status()
+        self._log("job=%s finalized CANCELLED", job_id)
+
+    # --- lifecycle steps -----------------------------------------------------
+
+    def _spawn_runner(self, job_id: str, execution_data: dict) -> Any | None:
+        try:
+            return self.backend.start(job_id, execution_data)
+        except Exception as exc:  # noqa: BLE001 - report any spawn failure as a job failure
+            self._log("job=%s failed to start runner: %s", job_id, exc)
+            self._fail_job_if_active(
+                job_id,
+                error_code="RUNNER_SPAWN_ERROR",
+                error_message=str(exc),
+            )
+            return None
+
     def _reap_finished(self) -> None:
         finished: list[str] = []
-        for job_id, handle in self.active.items():
-            exit_code = handle.process.poll()
+        for job_id, runner in self.active.items():
+            exit_code = self.backend.poll(runner.handle)
             if exit_code is None:
                 continue
             finished.append(job_id)
             self._log("job=%s runner exited code=%s", job_id, exit_code)
             if exit_code != 0:
+                # Safety net: the worker died without reporting a terminal status.
                 self._fail_job_if_active(
                     job_id,
                     error_code="RUNNER_EXIT_ERROR",
                     error_message=f"Runner process exited with code {exit_code}",
                 )
+            self.backend.cleanup(runner.handle)
 
         for job_id in finished:
             del self.active[job_id]
+
+    def _handle_cancellations(self) -> None:
+        """Terminate workers for CANCELLING jobs, then finalize them to CANCELLED (D2)."""
+        try:
+            cancelling = self._fetch_jobs("CANCELLING")
+        except httpx.HTTPError as exc:
+            self._log("failed to fetch cancelling jobs: %s", exc)
+            return
+
+        for job in cancelling:
+            job_id = str(job["id"])
+            runner = self.active.pop(job_id, None)
+            if runner is not None:
+                self._log("job=%s cancelling — terminating worker", job_id)
+                try:
+                    self.backend.terminate(runner.handle)
+                    self.backend.cleanup(runner.handle)
+                except Exception as exc:  # noqa: BLE001
+                    self._log("job=%s error terminating worker: %s", job_id, exc)
+            self._finalize_cancel(job_id)
 
     def _dispatch(self) -> None:
         if len(self.active) >= self.concurrency_limit:
             return
 
-        queued = self._fetch_queued_jobs()
+        queued = self._fetch_jobs("QUEUED")
         if not queued:
             return
 
@@ -156,33 +192,41 @@ class Orchestrator:
         if job_id in self.active:
             return
 
+        execution_data = self._fetch_execution_data(job_id)
+        if execution_data is None:
+            self._log("job=%s has no execution data, skipping", job_id)
+            return
+
         if not self._start_job(job_id):
             return
 
-        process = self._spawn_runner(job_id)
-        if process is None:
+        handle = self._spawn_runner(job_id, execution_data)
+        if handle is None:
             return
 
-        self.active[job_id] = RunnerHandle(job_id=job_id, process=process)
+        self.active[job_id] = RunnerHandle(job_id=job_id, handle=handle)
 
     def run_forever(self) -> None:
         self._log(
-            "orchestrator started api=%s concurrency=%s poll=%ss runner=%s",
+            "orchestrator started api=%s backend=%s concurrency=%s poll=%ss",
             self.api_base_url,
+            self.backend.name,
             self.concurrency_limit,
             self.poll_interval_seconds,
-            self.runner_script,
         )
         try:
             while True:
                 self._reap_finished()
+                self._handle_cancellations()
                 self._dispatch()
                 time.sleep(self.poll_interval_seconds)
         except KeyboardInterrupt:
             self._log("orchestrator shutting down")
-            for handle in self.active.values():
-                if handle.process.poll() is None:
-                    handle.process.terminate()
+            for runner in self.active.values():
+                try:
+                    self.backend.terminate(runner.handle)
+                except Exception:  # noqa: BLE001
+                    pass
 
 
 def main() -> None:
@@ -192,17 +236,31 @@ def main() -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
 
-    runner_script = Path(_env_str("RUNNER_SCRIPT"))
-    if not runner_script.is_file():
-        print(f"Runner script not found: {runner_script}", file=sys.stderr)
-        sys.exit(1)
+    api_base_url = _env_str("API_BASE_URL", "http://localhost:8000")
+    service_token = _env_str("INTERNAL_SERVICE_TOKEN")
+    runner_backend_name = _env_str("RUNNER_BACKEND", "subprocess")
+
+    runner_script: Path | None = None
+    if runner_backend_name.lower() == "subprocess":
+        runner_script = Path(_env_str("RUNNER_SCRIPT"))
+        if not runner_script.is_file():
+            print(f"Runner script not found: {runner_script}", file=sys.stderr)
+            sys.exit(1)
+
+    backend = build_runner_backend(
+        backend=runner_backend_name,
+        api_base_url=api_base_url,
+        service_token=service_token,
+        runner_script=runner_script,
+        namespace=_env_str("K8S_NAMESPACE", "default"),
+    )
 
     orchestrator = Orchestrator(
-        api_base_url=_env_str("API_BASE_URL", "http://localhost:8000"),
-        service_token=_env_str("INTERNAL_SERVICE_TOKEN"),
+        api_base_url=api_base_url,
+        service_token=service_token,
         concurrency_limit=_env_int("CONCURRENCY_LIMIT", 2),
         poll_interval_seconds=float(_env_int("POLL_INTERVAL_SECONDS", 3)),
-        runner_script=runner_script,
+        backend=backend,
     )
     try:
         orchestrator.run_forever()

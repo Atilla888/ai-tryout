@@ -105,6 +105,14 @@ async def get_job_by_id_service(db: AsyncSession, job_id: int) -> Job | None:
     return result.scalar_one_or_none()
 
 
+async def get_job_with_space_by_id_service(db: AsyncSession, job_id: int) -> Job | None:
+    """Internal lookup that also eager-loads the space (for execution data)."""
+    result = await db.execute(
+        select(Job).options(selectinload(Job.space)).where(Job.id == job_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> list[Job]:
     """Oldest first — the orchestrator picks from the front of this list."""
     result = await db.execute(
@@ -134,7 +142,14 @@ async def start_job_service(db: AsyncSession, job: Job) -> Job:
 
 
 async def cancel_job_service(db: AsyncSession, job: Job) -> Job:
-    """Queued jobs cancel immediately. Running ones go through CANCELLING first."""
+    """Request cancellation of a job.
+
+    A queued job has no worker yet, so it cancels immediately (QUEUED -> CANCELLED).
+    A job that is already executing (STARTING/RUNNING) only moves to CANCELLING here:
+    the orchestrator must actually terminate the worker before the job becomes
+    CANCELLED (D2). The orchestrator calls :func:`finalize_cancellation_service`
+    once the worker is gone.
+    """
     now = datetime.now(timezone.utc)
     was_queued = job.status == JobStatus.QUEUED.value
 
@@ -146,8 +161,7 @@ async def cancel_job_service(db: AsyncSession, job: Job) -> Job:
     elif job.status in {JobStatus.STARTING.value, JobStatus.RUNNING.value}:
         ensure_transition(job.status, JobStatus.CANCELLING)
         job.status = JobStatus.CANCELLING.value
-        ensure_transition(job.status, JobStatus.CANCELLED)
-        job.status = JobStatus.CANCELLED.value
+        # Record when the user asked to cancel; finalize sets finished_at later.
         job.cancelled_at = now
     else:
         raise JobTransitionError(f"Cannot cancel job with status {job.status}")
@@ -155,6 +169,19 @@ async def cancel_job_service(db: AsyncSession, job: Job) -> Job:
     await db.commit()
     if was_queued:
         await recalculate_queue_positions(db)
+    await db.refresh(job)
+    return job
+
+
+async def finalize_cancellation_service(db: AsyncSession, job: Job) -> Job:
+    """Move a CANCELLING job to CANCELLED once its worker has been stopped (D2)."""
+    ensure_transition(job.status, JobStatus.CANCELLED)
+    now = datetime.now(timezone.utc)
+    job.status = JobStatus.CANCELLED.value
+    job.finished_at = now
+    if job.cancelled_at is None:
+        job.cancelled_at = now
+    await db.commit()
     await db.refresh(job)
     return job
 
