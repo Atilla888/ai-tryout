@@ -9,7 +9,12 @@ from app.db.models import Artifact, Job
 from app.schemas.jobs import JobStatus
 from app.services.job_transitions import JobTransitionError, ensure_transition
 from app.services.serializers import job_to_submit_response
-from app.services.storage import save_job_input_file, save_job_output_file
+from app.services.storage import (
+    delete_job_storage,
+    delete_storage_file,
+    save_job_input_file,
+    save_job_output_file,
+)
 from uuid import UUID
 
 JOB_RETENTION_DAYS = 14
@@ -297,7 +302,11 @@ async def delete_job_from_history_service(
     public_id: UUID,
     user_id: int,
 ) -> None:
-    """Remove a job from the user's history. Only the owner can do this."""
+    """Remove a job from the user's history. Only the owner can do this.
+
+    Also removes the job's artifact files and storage directory from disk right
+    away, instead of waiting for the expiration cleanup to reclaim them.
+    """
     result = await db.execute(select(Job).where(Job.public_id == public_id))
     job = result.scalar_one_or_none()
 
@@ -307,10 +316,13 @@ async def delete_job_from_history_service(
     if job.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not allowed to delete this job")
 
-    artifacts_result = await db.execute(select(Artifact).where(Artifact.job_id == job.id))
+    job_id = job.id
+    artifacts_result = await db.execute(select(Artifact).where(Artifact.job_id == job_id))
     artifacts = artifacts_result.scalars().all()
     for artifact in artifacts:
+        delete_storage_file(artifact.storage_path)
         await db.delete(artifact)
 
     await db.delete(job)
+    delete_job_storage(job_id)
     await db.commit()

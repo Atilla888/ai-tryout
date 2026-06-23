@@ -203,6 +203,39 @@ async def test_delete_job_also_removes_artifacts(db_session):
 
 
 @pytest.mark.asyncio
+async def test_delete_job_also_removes_files(db_session, monkeypatch):
+    """Deleting from history must remove the artifact files and job dir from disk (C2)."""
+    deleted_files: list[str] = []
+    deleted_job_dirs: list = []
+    monkeypatch.setattr(
+        "app.services.jobs.delete_storage_file",
+        lambda path: deleted_files.append(path),
+    )
+    monkeypatch.setattr(
+        "app.services.jobs.delete_job_storage",
+        lambda job_id: deleted_job_dirs.append(job_id),
+    )
+
+    user, _, job = await _seed_user_space_job(db_session)
+    artifact = await _seed_artifact(db_session, job=job)
+    storage_path = artifact.storage_path
+    job_id = job.id
+
+    await delete_job_from_history_service(db_session, job.public_id, user.id)
+
+    # DB rows gone...
+    assert (
+        await db_session.execute(select(Job).where(Job.id == job_id))
+    ).scalar_one_or_none() is None
+    assert (
+        await db_session.execute(select(Artifact).where(Artifact.job_id == job_id))
+    ).scalars().all() == []
+    # ...and the storage helpers were called for the files and the job dir.
+    assert storage_path in deleted_files
+    assert job_id in deleted_job_dirs
+
+
+@pytest.mark.asyncio
 async def test_cleanup_expires_jobs_and_removes_artifacts(db_session, monkeypatch):
     """Cleanup marks expired jobs as EXPIRED (D3) and removes their artifact rows."""
     past = datetime.now(timezone.utc) - timedelta(days=1)
