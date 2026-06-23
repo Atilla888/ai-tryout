@@ -7,7 +7,24 @@ os.environ.setdefault("ALEMBIC_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("INTERNAL_SERVICE_TOKEN", "test-internal-token")
 os.environ.setdefault("ARTIFACT_STORAGE_ROOT", "storage")
 
+import sqlite3
 import uuid
+
+# uuid.uuid7 only exists in Python 3.14+. The tests use it for primary keys;
+# fall back to the uuid6 backport (returning a plain uuid.UUID) so the suite
+# also runs on Python 3.13.
+if not hasattr(uuid, "uuid7"):
+    import uuid6
+
+    def _uuid7() -> uuid.UUID:
+        return uuid.UUID(int=uuid6.uuid7().int)
+
+    uuid.uuid7 = _uuid7
+
+# Fixtures assign uuid7 values to integer primary keys; SQLite's driver rejects
+# raw UUID objects, so store them as text. Same spirit as the JSONB->JSON
+# compatibility shim in _prepare_sqlite_schema below.
+sqlite3.register_adapter(uuid.UUID, str)
 
 import pytest
 import pytest_asyncio
@@ -83,47 +100,48 @@ async def client(db_session):
 
 @pytest_asyncio.fixture
 async def seed_job(db_session):
-    """Inserts a User, Space, and a RUNNING Job. Returns the job_id."""
-    user_id = uuid.uuid7()
-    space_id = uuid.uuid7()
-    job_id = uuid.uuid7()
-    unique = uuid.uuid7().hex
+    """Inserts a User, Space, and a RUNNING Job. Returns the Job ORM object.
 
-    await db_session.execute(
-        insert(User).values(
-            id=user_id,
-            subject_id=f"test-subject-{unique}",
-            idp="test",
-            email=f"test-{unique}@example.com",
-            display_name="Test User",
-            role="user",
-        )
+    Integer primary keys autoincrement and ``public_id`` is generated, so tests
+    can use ``job.id`` for internal endpoints and ``job.public_id`` for the
+    public API.
+    """
+    unique = uuid.uuid4().hex
+
+    user = User(
+        subject_id=f"test-subject-{unique}",
+        idp="test",
+        email=f"test-{unique}@example.com",
+        display_name="Test User",
+        role="user",
     )
-    await db_session.execute(
-        insert(Space).values(
-            id=space_id,
-            slug=f"test-space-{unique}",
-            name="Test Space",
-            description="Test description",
-            task_type="text-to-image",
-            input_types=[],
-            output_types=[],
-            container_image="example/image:latest",
-            ui_config={},
-            runner_config={},
-            visibility="PUBLIC",
-            status="PUBLISHED",
-            owner_id=user_id,
-        )
+    db_session.add(user)
+    await db_session.flush()
+
+    space = Space(
+        slug=f"test-space-{unique}",
+        name="Test Space",
+        description="Test description",
+        task_type="text-to-image",
+        input_types=[],
+        output_types=[],
+        container_image="example/image:latest",
+        ui_config={},
+        runner_config={},
+        visibility="PUBLIC",
+        status="PUBLISHED",
+        owner_id=user.id,
     )
-    await db_session.execute(
-        insert(Job).values(
-            id=job_id,
-            space_id=space_id,
-            user_id=user_id,
-            status="RUNNING",
-            input_payload={},
-        )
+    db_session.add(space)
+    await db_session.flush()
+
+    job = Job(
+        space_id=space.id,
+        user_id=user.id,
+        status="RUNNING",
+        input_payload={},
     )
+    db_session.add(job)
+    await db_session.flush()
     await db_session.commit()
-    return job_id
+    return job

@@ -3,7 +3,7 @@
 import uuid
 
 import pytest
-from sqlalchemy import insert, select
+from sqlalchemy import select
 
 from app.db.models import Job, Space, User
 from app.schemas.jobs import JobStatus
@@ -13,6 +13,7 @@ from app.services.jobs import (
     create_job_service,
     fail_job_service,
     finalize_cancellation_service,
+    get_job_by_public_id_service,
     list_jobs_by_status_service,
     recalculate_queue_positions,
     start_job_service,
@@ -21,40 +22,45 @@ from app.services.jobs import (
 )
 
 
+async def _load_job(db_session, submit_response):
+    """Fetch the ORM Job for a submit response (which carries the public_id UUID)."""
+    return await get_job_by_public_id_service(db_session, submit_response.id)
+
+
 async def _seed_space_and_user(db_session):
-    """Inserts a User and a published Space into the test DB. Returns (user_id, space_id)."""
-    user_id = uuid.uuid7()
-    space_id = uuid.uuid7()
-    unique = uuid.uuid7().hex
-    await db_session.execute(
-        insert(User).values(
-            id=user_id,
-            subject_id=f"sub-{unique}",
-            idp="test",
-            email=f"user-{unique}@example.com",
-            display_name="Test",
-            role="user",
-        )
+    """Inserts a User and a published Space. Returns their integer (user_id, space_id).
+
+    Integer primary keys autoincrement; the service layer addresses jobs/spaces
+    by these internal ids.
+    """
+    unique = uuid.uuid4().hex
+    user = User(
+        subject_id=f"sub-{unique}",
+        idp="test",
+        email=f"user-{unique}@example.com",
+        display_name="Test",
+        role="user",
     )
-    await db_session.execute(
-        insert(Space).values(
-            id=space_id,
-            slug=f"space-{unique}",
-            name="Test Space",
-            description="desc",
-            task_type="demo",
-            input_types=[],
-            output_types=[],
-            container_image="img:latest",
-            ui_config={},
-            runner_config={},
-            visibility="PUBLIC",
-            status="PUBLISHED",
-            owner_id=user_id,
-        )
+    db_session.add(user)
+    await db_session.flush()
+    space = Space(
+        slug=f"space-{unique}",
+        name="Test Space",
+        description="desc",
+        task_type="demo",
+        input_types=[],
+        output_types=[],
+        container_image="img:latest",
+        ui_config={},
+        runner_config={},
+        visibility="PUBLIC",
+        status="PUBLISHED",
+        owner_id=user.id,
     )
+    db_session.add(space)
+    await db_session.flush()
     await db_session.commit()
-    return user_id, space_id
+    return user.id, space.id
 
 
 @pytest.mark.asyncio
@@ -73,9 +79,9 @@ async def test_queue_recalculates_when_first_job_starts(db_session):
     user_id, space_id = await _seed_space_and_user(db_session)
     first = await create_job_service(db_session, space_id, user_id, {"a": "1"}, {})
     second = await create_job_service(db_session, space_id, user_id, {"b": "2"}, {})
-    job1 = await db_session.get(Job, first.id)
+    job1 = await _load_job(db_session, first)
     await start_job_service(db_session, job1)
-    job2 = await db_session.get(Job, second.id)
+    job2 = await _load_job(db_session, second)
     assert job2.queue_position == 1
 
 
@@ -83,7 +89,7 @@ async def test_queue_recalculates_when_first_job_starts(db_session):
 async def test_queued_job_cancel_is_immediate(db_session):
     user_id, space_id = await _seed_space_and_user(db_session)
     created = await create_job_service(db_session, space_id, user_id, {}, {})
-    job = await db_session.get(Job, created.id)
+    job = await _load_job(db_session, created)
     cancelled = await cancel_job_service(db_session, job)
     assert cancelled.status == JobStatus.CANCELLED.value
     assert cancelled.cancelled_at is not None
@@ -95,7 +101,7 @@ async def test_running_job_cancel_goes_through_cancelling(db_session):
     """Running jobs stop at CANCELLING; the orchestrator finalizes to CANCELLED (D2)."""
     user_id, space_id = await _seed_space_and_user(db_session)
     created = await create_job_service(db_session, space_id, user_id, {}, {})
-    job = await db_session.get(Job, created.id)
+    job = await _load_job(db_session, created)
     await start_job_service(db_session, job)
     await db_session.refresh(job)
     await update_job_progress_service(db_session, job, progress_percent=10, message="working")
@@ -114,7 +120,7 @@ async def test_running_job_cancel_goes_through_cancelling(db_session):
 async def test_happy_path_start_progress_succeed(db_session):
     user_id, space_id = await _seed_space_and_user(db_session)
     created = await create_job_service(db_session, space_id, user_id, {}, {})
-    job = await db_session.get(Job, created.id)
+    job = await _load_job(db_session, created)
     await start_job_service(db_session, job)
     await db_session.refresh(job)
     await update_job_progress_service(db_session, job, progress_percent=50, message="half")
@@ -129,7 +135,7 @@ async def test_happy_path_start_progress_succeed(db_session):
 async def test_fail_from_running(db_session):
     user_id, space_id = await _seed_space_and_user(db_session)
     created = await create_job_service(db_session, space_id, user_id, {}, {})
-    job = await db_session.get(Job, created.id)
+    job = await _load_job(db_session, created)
     await start_job_service(db_session, job)
     await db_session.refresh(job)
     await update_job_progress_service(db_session, job, progress_percent=5, message="start")
@@ -165,8 +171,9 @@ async def test_list_jobs_by_status_ordered(db_session):
 @pytest.mark.asyncio
 async def test_submit_and_list_jobs_api(client, db_session):
     user_id, space_id = await _seed_space_and_user(db_session)
+    space = await db_session.get(Space, space_id)
     form_response = await client.post(
-        f"/spaces/{space_id}/jobs",
+        f"/spaces/{space.public_id}/jobs",
         data={"prompt": "hello"},
     )
     assert form_response.status_code == 201
@@ -174,7 +181,8 @@ async def test_submit_and_list_jobs_api(client, db_session):
     assert body["status"] == "QUEUED"
     assert body["queue_position"] == 1
 
-    listed = await client.get("/jobs", params={"status": "QUEUED"})
+    # The orchestrator-facing listing lives on the internal API.
+    listed = await client.get("/internal/jobs", params={"status": "QUEUED"})
     assert listed.status_code == 200
     assert len(listed.json()) == 1
 
@@ -185,10 +193,11 @@ async def test_recalculate_queue_positions(db_session):
     j1 = await create_job_service(db_session, space_id, user_id, {}, {})
     j2 = await create_job_service(db_session, space_id, user_id, {}, {})
     j3 = await create_job_service(db_session, space_id, user_id, {}, {})
-    job1 = await db_session.get(Job, j1.id)
+    job1 = await _load_job(db_session, j1)
     await cancel_job_service(db_session, job1)
     await recalculate_queue_positions(db_session)
     result = await db_session.execute(select(Job).where(Job.status == JobStatus.QUEUED.value).order_by(Job.queue_position))
     remaining = list(result.scalars().all())
     assert [j.queue_position for j in remaining] == [1, 2]
-    assert {j.id for j in remaining} == {j2.id, j3.id}
+    # j2/j3 are submit responses carrying public_id UUIDs.
+    assert {j.public_id for j in remaining} == {j2.id, j3.id}
