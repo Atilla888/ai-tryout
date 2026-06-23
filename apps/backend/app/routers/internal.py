@@ -64,6 +64,7 @@ async def list_internal_jobs(
 
 @router.get("/jobs/{job_id}", response_model=InternalJobRead)
 async def get_internal_job(db: db_dependency, job_id: int):
+    """Full internal job state by integer id, for the orchestrator/runner."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     return job
 
@@ -137,6 +138,7 @@ async def get_internal_artifact_content(db: db_dependency, artifact_id: int) -> 
 
 @router.patch("/jobs/{job_id}/start", response_model=InternalJobRead)
 async def patch_job_start(db: db_dependency, job_id: int):
+    """Orchestrator marks a queued job STARTING as it launches the worker."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await start_job_service(db, job)
@@ -146,6 +148,7 @@ async def patch_job_start(db: db_dependency, job_id: int):
 
 @router.patch("/jobs/{job_id}/progress", response_model=InternalJobRead)
 async def patch_job_progress(db: db_dependency, job_id: int, body: JobProgressUpdate):
+    """Runner reports progress; the first update also moves STARTING -> RUNNING."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await update_job_progress_service(
@@ -160,6 +163,7 @@ async def patch_job_progress(db: db_dependency, job_id: int, body: JobProgressUp
 
 @router.patch("/jobs/{job_id}/succeed", response_model=InternalJobRead)
 async def patch_job_succeed(db: db_dependency, job_id: int):
+    """Runner marks the job SUCCEEDED once its worker finished cleanly."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await succeed_job_service(db, job)
@@ -169,6 +173,7 @@ async def patch_job_succeed(db: db_dependency, job_id: int):
 
 @router.patch("/jobs/{job_id}/fail", response_model=InternalJobRead)
 async def patch_job_fail(db: db_dependency, job_id: int, body: JobFailUpdate):
+    """Runner marks the job FAILED with an error code and message."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await fail_job_service(
@@ -203,6 +208,7 @@ async def post_job_artifact(
     preview_supported: bool = Form(False),
     file: UploadFile = File(...),
 ):
+    """Runner uploads an output file for the job, recording a new artifact."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is required")
