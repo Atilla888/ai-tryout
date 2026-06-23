@@ -66,6 +66,7 @@ async def create_job(request: Request, db: db_dependency, space_id: UUID, user: 
 
 @router.get("/jobs/{job_id}", response_model=JobRead, status_code=status.HTTP_200_OK)
 async def get_job(db: db_dependency, job_id: UUID):
+    """Public job status and details by public id; the UI polls this."""
     job = await get_job_by_public_id_service(db=db, public_id=job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
@@ -74,6 +75,7 @@ async def get_job(db: db_dependency, job_id: UUID):
 
 @router.get("/jobs/{job_id}/artifacts", response_model=list[ArtifactRead])
 async def list_job_artifacts(db: db_dependency, job_id: UUID):
+    """List a job's output artifacts (public ids) for the UI."""
     job = await get_job_by_public_id_service(db=db, public_id=job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
@@ -83,6 +85,7 @@ async def list_job_artifacts(db: db_dependency, job_id: UUID):
 
 @router.post("/jobs/{job_id}/cancel", response_model=JobRead, status_code=status.HTTP_200_OK)
 async def cancel_job(db: db_dependency, job_id: UUID, user: CurrentUser):
+    """Request cancellation of a job; only its owner or an admin may call this."""
     job = await get_job_by_public_id_service(db=db, public_id=job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")

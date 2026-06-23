@@ -1,63 +1,145 @@
-.app-nav {
+.sara-nav {
   background: #fff;
   border-bottom: 3px solid #f5c030;
+  box-shadow: 0 1px 3px rgba(26, 26, 26, 0.04);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  gap: 24px;
+  padding: 0 32px;
   height: 72px;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.app-brand {
+/* Brand --------------------------------------------------------------- */
+.sara-brand {
   display: flex;
   align-items: center;
   gap: 12px;
   text-decoration: none;
 }
 
-.app-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
+.sara-logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f5c030, #e6b52b);
+  color: #412402;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
-.app-brand-name {
+.sara-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.sara-brand-name {
   font-size: 18px;
   font-weight: 800;
   color: #1a1a1a;
+  letter-spacing: 0.04em;
 }
 
-.app-brand-sub {
+.sara-brand-sub {
   font-size: 11px;
   color: #6e7280;
   letter-spacing: 0.02em;
 }
 
-.app-nav-links {
+/* Nav links ----------------------------------------------------------- */
+.sara-nav-links {
   display: flex;
-  gap: 28px;
-  font-size: 14px;
+  align-items: center;
+  gap: 6px;
 }
 
-.app-nav-link {
+.sara-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
   color: #525252;
-  text-decoration: none;
+  font-size: 14px;
   font-weight: 700;
-  transition: color 0.15s;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
-.app-nav-link:hover,
-.app-nav-link.active {
+.sara-nav-link:hover {
+  background: #f6f7fb;
   color: #1a1a1a;
 }
 
-.app-content {
+.sara-nav-link.active {
+  background: rgba(245, 192, 48, 0.18);
+  color: #1a1a1a;
+}
+
+/* Authenticated user label */
+.sara-user {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 6px 8px 14px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Sign-in call to action --------------------------------------------- */
+.sara-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 20px;
+  border: 1px solid #f5c030;
+  border-radius: 999px;
+  background: #f5c030;
+  color: #412402;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.sara-cta:hover {
+  background: #e6b52b;
+  transform: translateY(-1px);
+}
+
+/* Page content -------------------------------------------------------- */
+.sara-content {
   max-width: 1360px;
   width: 100%;
   margin: 0 auto;
   padding: 28px 24px;
   flex: 1;
+}
+
+@media (max-width: 640px) {
+  .sara-nav {
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .sara-brand-sub {
+    display: none;
+  }
+
+  .sara-nav-links {
+    gap: 2px;
+  }
+
+  .sara-nav-link,
+  .sara-user {
+    padding: 8px 9px;
+  }
 }

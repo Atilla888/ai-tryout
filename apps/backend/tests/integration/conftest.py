@@ -19,7 +19,6 @@ os.environ.setdefault("INTERNAL_SERVICE_TOKEN", "test-internal-token")
 os.environ.setdefault("ARTIFACT_STORAGE_ROOT", "storage")
 
 import uuid
-import uuid6
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -27,10 +26,10 @@ from sqlalchemy import JSON, insert
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config import settings
-from app.db import Base, get_db
+from app.core.config import settings
+from app.db.session import Base, get_db
 from app.main import app
-from app.models import Job, Space, User
+from app.db.models import Job, Space, User
 
 TEST_SERVICE_TOKEN = "test-internal-token"
 
@@ -107,56 +106,55 @@ async def client(db_session):
 # ---------------------------------------------------------------------------
 @pytest_asyncio.fixture
 async def seed_space_and_user(db_session):
-    """Inserts a User and a published Space. Returns (user_id, space_id)."""
-    user_id = uuid6.uuid7()
-    space_id = uuid6.uuid7()
-    unique = uuid6.uuid7().hex
+    """Inserts a User and a published Space. Returns their integer (user_id, space_id)."""
+    unique = uuid.uuid4().hex
 
-    await db_session.execute(
-        insert(User).values(
-            id=user_id,
-            subject_id=f"test-subject-{unique}",
-            idp="test",
-            email=f"test-{unique}@example.com",
-            display_name="Test User",
-            role="user",
-        )
+    user = User(
+        subject_id=f"test-subject-{unique}",
+        idp="test",
+        email=f"test-{unique}@example.com",
+        display_name="Test User",
+        role="user",
     )
-    await db_session.execute(
-        insert(Space).values(
-            id=space_id,
-            slug=f"test-space-{unique}",
-            name="Test Space",
-            description="Test description",
-            task_type="object-detection",
-            input_types=[],
-            output_types=[],
-            container_image="example/yolo:latest",
-            ui_config={},
-            runner_config={},
-            visibility="PUBLIC",
-            status="PUBLISHED",
-            owner_id=user_id,
-        )
+    db_session.add(user)
+    await db_session.flush()
+
+    space = Space(
+        slug=f"test-space-{unique}",
+        name="Test Space",
+        description="Test description",
+        task_type="object-detection",
+        input_types=[],
+        output_types=[],
+        container_image="example/yolo:latest",
+        ui_config={},
+        runner_config={},
+        visibility="PUBLIC",
+        status="PUBLISHED",
+        owner_id=user.id,
     )
+    db_session.add(space)
+    await db_session.flush()
     await db_session.commit()
-    return user_id, space_id
+    return user.id, space.id
 
 
 @pytest_asyncio.fixture
 async def queued_job(db_session, seed_space_and_user):
-    """Inserts a Job with status QUEUED. Returns job_id."""
-    user_id, space_id = seed_space_and_user
-    job_id = uuid6.uuid7()
+    """Inserts a Job with status QUEUED. Returns the Job ORM object.
 
-    await db_session.execute(
-        insert(Job).values(
-            id=job_id,
-            space_id=space_id,
-            user_id=user_id,
-            status="QUEUED",
-            input_payload={},
-        )
+    Use ``queued_job.public_id`` for public endpoints and ``queued_job.id`` for
+    the internal (orchestrator/runner) endpoints.
+    """
+    user_id, space_id = seed_space_and_user
+
+    job = Job(
+        space_id=space_id,
+        user_id=user_id,
+        status="QUEUED",
+        input_payload={},
     )
+    db_session.add(job)
+    await db_session.flush()
     await db_session.commit()
-    return job_id
+    return job

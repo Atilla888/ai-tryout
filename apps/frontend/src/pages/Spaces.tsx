@@ -1,238 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import {
-  artifactDownloadUrl,
-  fetchJobArtifacts,
-  fetchMyHistory,
-  fetchSpace,
-  submitJob,
-} from '../api/api'
-import type { Artifact, InputFieldConfig, Job, JobStatus, SpaceDetail } from '../api/api'
+import { fetchJobArtifacts, fetchMyHistory, fetchSpace, submitJob } from '../api/api'
+import type { Artifact, Job, JobStatus, SpaceDetail } from '../api/api'
+import SpaceInputField from '../components/SpaceInputField'
+import SpaceSidebar from '../components/SpaceSidebar'
+import { validateForm, type FormErrors, type FormValues } from '../components/spaceForm'
 import './Spaces.css'
 
-type FormValues = Record<string, string | File | null>
-type FormErrors = Record<string, string>
-
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm']
-
 const ACTIVE_JOB_STATUSES: JobStatus[] = ['QUEUED', 'STARTING', 'RUNNING', 'CANCELLING']
-const RECENT_RUNS_LIMIT = 5
 const HISTORY_POLL_MS = 3000
-const SECONDS_PER_QUEUE_POSITION = 15
-
-/** Converts a queue position to a rough human-readable time estimate. */
-function formatEta(queuePosition: number): string {
-  const seconds = queuePosition * SECONDS_PER_QUEUE_POSITION
-  if (seconds < 60) return `~${seconds}s`
-  return `~${Math.round(seconds / 60)}m`
-}
-
-/** Returns a status line and progress value for the sidebar queue-status card. */
-function queueStatus(job: Job): { line: string; progress: number } {
-  switch (job.status) {
-    case 'QUEUED':
-      return {
-        line:
-          job.queue_position != null
-            ? `Position ${job.queue_position} in queue · ${formatEta(job.queue_position)} remaining`
-            : 'Waiting in queue',
-        progress: 0,
-      }
-    case 'STARTING':
-      return { line: 'Starting your job...', progress: 0 }
-    case 'RUNNING':
-      return {
-        line: job.progress_message || `Running · ${job.progress_percent}%`,
-        progress: job.progress_percent,
-      }
-    case 'CANCELLING':
-      return { line: 'Cancelling...', progress: job.progress_percent }
-    default:
-      return { line: job.status, progress: 0 }
-  }
-}
-
-/** Client-side validation of the job submission form. Returns a map of field name → error message. */
-function validateForm(inputs: InputFieldConfig[], values: FormValues): FormErrors {
-  const errors: FormErrors = {}
-  for (const field of inputs) {
-    const val = values[field.name]
-    const empty = val === null || val === undefined || val === ''
-    if (field.required && empty) {
-      errors[field.name] = `${field.label} is required`
-      continue
-    }
-    if (!empty) {
-      if (typeof val === 'string') {
-        if (field.maxLength && val.length > field.maxLength)
-          errors[field.name] = `Max ${field.maxLength} characters`
-        if (field.type === 'number') {
-          const n = parseFloat(val)
-          if (!isNaN(n)) {
-            if (field.min !== undefined && n < field.min) errors[field.name] = `Minimum is ${field.min}`
-            if (field.max !== undefined && n > field.max) errors[field.name] = `Maximum is ${field.max}`
-          }
-        }
-      }
-      if (val instanceof File) {
-        const allowed = field.type === 'image_upload' ? IMAGE_TYPES : AUDIO_TYPES
-        if (!allowed.includes(val.type)) {
-          errors[field.name] = `Invalid file type`
-        } else if (field.max_size_mb && val.size > field.max_size_mb * 1024 * 1024) {
-          errors[field.name] = `File too large. Max ${field.max_size_mb} MB`
-        }
-      }
-    }
-  }
-  return errors
-}
-
-interface DropZoneProps {
-  field: InputFieldConfig
-  value: File | null
-  hasError: boolean
-  onChange: (file: File | null) => void
-}
-
-/** Drag-and-drop file input that also opens a file picker on click. */
-function DropZone({ field, value, hasError, onChange }: DropZoneProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const accept = field.type === 'image_upload' ? 'image/*' : 'audio/*'
-  const allowed = field.type === 'image_upload' ? IMAGE_TYPES : AUDIO_TYPES
-
-  const handleFile = (file: File | undefined) => {
-    if (!file) return
-    onChange(allowed.includes(file.type) ? file : null)
-  }
-
-  return (
-    <div
-      className={'drop-zone' + (dragging ? ' dragover' : '') + (hasError ? ' input-error' : '')}
-      onClick={() => inputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        style={{ display: 'none' }}
-        onChange={(e) => handleFile(e.target.files?.[0])}
-      />
-      <strong>{value ? value.name : 'Drop file or click to upload'}</strong>
-      <span className="drop-note">
-        Accepted: {field.mime_types?.join(', ') || accept} · Max {field.max_size_mb ?? 10} MB
-      </span>
-    </div>
-  )
-}
-
-interface FieldProps {
-  config: InputFieldConfig
-  value: string | File | null
-  error?: string
-  onChange: (name: string, val: string | File | null) => void
-}
-
-/** Renders the appropriate input control for a single space input field definition. */
-function Field({ config, value, error, onChange }: FieldProps) {
-  const { name, type, label, description, required, placeholder, maxLength, min, max, options } = config
-  const hasError = !!error
-
-  const renderControl = () => {
-    switch (type) {
-      case 'text':
-        return (
-          <input
-            type="text"
-            id={name}
-            className={hasError ? 'input-error' : ''}
-            placeholder={placeholder}
-            maxLength={maxLength}
-            value={(value as string) ?? ''}
-            onChange={(e) => onChange(name, e.target.value)}
-          />
-        )
-      case 'textarea':
-        return (
-          <textarea
-            id={name}
-            className={hasError ? 'input-error' : ''}
-            placeholder={placeholder}
-            maxLength={maxLength}
-            value={(value as string) ?? ''}
-            onChange={(e) => onChange(name, e.target.value)}
-          />
-        )
-      case 'number':
-        return (
-          <input
-            type="number"
-            id={name}
-            className={hasError ? 'input-error' : ''}
-            placeholder={placeholder}
-            min={min}
-            max={max}
-            value={(value as string) ?? ''}
-            onChange={(e) => onChange(name, e.target.value)}
-          />
-        )
-      case 'select':
-        return (
-          <select
-            id={name}
-            className={hasError ? 'input-error' : ''}
-            value={(value as string) ?? ''}
-            onChange={(e) => onChange(name, e.target.value)}
-          >
-            <option value="">{placeholder ?? 'Select an option'}</option>
-            {(options ?? []).map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        )
-      case 'image_upload':
-      case 'audio_upload':
-        return (
-          <DropZone
-            field={config}
-            value={value as File | null}
-            hasError={hasError}
-            onChange={(file) => onChange(name, file)}
-          />
-        )
-      default:
-        console.warn(`Unsupported input type: "${type}". Rendering fallback text input.`)
-        return (
-          <input
-            type="text"
-            id={name}
-            placeholder={placeholder}
-            value={(value as string) ?? ''}
-            onChange={(e) => onChange(name, e.target.value)}
-          />
-        )
-    }
-  }
-
-  return (
-    <div className="form-row">
-      <label htmlFor={name}>
-        {label}
-        {required && <span className="required-indicator">*</span>}
-      </label>
-      {description && <div className="form-description">{description}</div>}
-      {renderControl()}
-      {error && <div className="field-error">{error}</div>}
-    </div>
-  )
-}
 
 /** Space detail page — shows the submission form and a sidebar with queue status and recent runs.
  * Recent jobs are polled while any of them is in an active state. */
@@ -408,7 +185,7 @@ function Spaces() {
             <p className="no-inputs">No input fields configured.</p>
           ) : (
             inputs.map((input) => (
-              <Field
+              <SpaceInputField
                 key={input.name}
                 config={input}
                 value={values[input.name] ?? null}
@@ -427,63 +204,17 @@ function Spaces() {
           </div>
         </div>
 
-        <aside>
-          {auth.isAuthenticated && (
-            <div className="sidebar-card sidebar-actions">
-              <button
-                type="button"
-                className="action-download"
-                onClick={() => canDownload && window.open(artifactDownloadUrl(downloadArtifact.id), '_blank')}
-                disabled={!canDownload}
-              >
-                Download
-              </button>
-              <button type="button" className="action-retry" onClick={handleRunAgain}>
-                Run again
-              </button>
-              <Link className="action-link" to="/history">
-                View in My History
-              </Link>
-              <button type="button" className="action-link" onClick={handleCopyShareLink}>
-                {linkCopied ? 'Link copied!' : 'Copy share link'}
-              </button>
-            </div>
-          )}
-
-          {activeJob && (
-            <div className="sidebar-card status-card">
-              <strong>Queue status</strong>
-              <div className="status-line">{queueStatus(activeJob).line}</div>
-              <div className="progress-bar">
-                <span style={{ width: `${queueStatus(activeJob).progress}%` }} />
-              </div>
-            </div>
-          )}
-
-          {recentJobs.length > 0 && (
-            <div className="sidebar-card sidebar-block">
-              <h2>Recent runs</h2>
-              <ul className="list-compact">
-                {recentJobs.slice(0, RECENT_RUNS_LIMIT).map((job) => (
-                  <li key={job.id}>
-                    <Link to={`/jobs/${job.id}`} className="list-compact-link">
-                      <span className="job-id">{job.id.slice(0, 8)}</span>
-                      <span>{job.status.toLowerCase()}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="sidebar-card sidebar-block">
-            <h2>About this space</h2>
-            <div className="about-copy">
-              {space.description ??
-                'This space runs the selected AI model and returns output based on your chosen inputs.'}
-            </div>
-          </div>
-        </aside>
+        <SpaceSidebar
+          isAuthenticated={auth.isAuthenticated}
+          recentJobs={recentJobs}
+          activeJob={activeJob}
+          canDownload={canDownload}
+          downloadArtifact={downloadArtifact}
+          linkCopied={linkCopied}
+          description={space.description}
+          onRunAgain={handleRunAgain}
+          onCopyShareLink={handleCopyShareLink}
+        />
       </div>
     </div>
   )

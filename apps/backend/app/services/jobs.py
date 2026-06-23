@@ -9,7 +9,12 @@ from app.db.models import Artifact, Job
 from app.schemas.jobs import JobStatus
 from app.services.job_transitions import JobTransitionError, ensure_transition
 from app.services.serializers import job_to_submit_response
-from app.services.storage import save_job_input_file, save_job_output_file
+from app.services.storage import (
+    delete_job_storage,
+    delete_storage_file,
+    save_job_input_file,
+    save_job_output_file,
+)
 from uuid import UUID
 
 JOB_RETENTION_DAYS = 14
@@ -122,6 +127,11 @@ async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> li
 
 
 async def list_jobs_by_user_service(db: AsyncSession, user_id: int) -> list[Job]:
+    """A single user's job history, newest first.
+
+    Eager-loads space and user so the rows can be serialized for /me/history
+    without extra queries.
+    """
     result = await db.execute(
         select(Job)
         .options(selectinload(Job.space), selectinload(Job.user))
@@ -132,6 +142,11 @@ async def list_jobs_by_user_service(db: AsyncSession, user_id: int) -> list[Job]
 
 
 async def start_job_service(db: AsyncSession, job: Job) -> Job:
+    """Move a job QUEUED -> STARTING when the orchestrator picks it up.
+
+    Clears the job's queue_position and renumbers the remaining queue so the
+    positions stay contiguous (1, 2, 3, ...).
+    """
     ensure_transition(job.status, JobStatus.STARTING)
     job.status = JobStatus.STARTING.value
     job.queue_position = None
@@ -211,6 +226,11 @@ async def update_job_progress_service(
 
 
 async def succeed_job_service(db: AsyncSession, job: Job) -> Job:
+    """Mark a running job SUCCEEDED (terminal).
+
+    Forces progress to 100% and stamps finished_at; backfills started_at if the
+    job somehow never reported a start.
+    """
     ensure_transition(job.status, JobStatus.SUCCEEDED)
     now = datetime.now(timezone.utc)
     job.status = JobStatus.SUCCEEDED.value
@@ -231,6 +251,11 @@ async def fail_job_service(
     error_code: str | None,
     error_message: str,
 ) -> Job:
+    """Mark a running job FAILED (terminal) and record why.
+
+    Stores error_code/error_message and stamps finished_at; backfills started_at
+    if the job never reported a start.
+    """
     ensure_transition(job.status, JobStatus.FAILED)
     now = datetime.now(timezone.utc)
     job.status = JobStatus.FAILED.value
@@ -277,7 +302,11 @@ async def delete_job_from_history_service(
     public_id: UUID,
     user_id: int,
 ) -> None:
-    """Remove a job from the user's history. Only the owner can do this."""
+    """Remove a job from the user's history. Only the owner can do this.
+
+    Also removes the job's artifact files and storage directory from disk right
+    away, instead of waiting for the expiration cleanup to reclaim them.
+    """
     result = await db.execute(select(Job).where(Job.public_id == public_id))
     job = result.scalar_one_or_none()
 
@@ -287,10 +316,13 @@ async def delete_job_from_history_service(
     if job.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not allowed to delete this job")
 
-    artifacts_result = await db.execute(select(Artifact).where(Artifact.job_id == job.id))
+    job_id = job.id
+    artifacts_result = await db.execute(select(Artifact).where(Artifact.job_id == job_id))
     artifacts = artifacts_result.scalars().all()
     for artifact in artifacts:
+        delete_storage_file(artifact.storage_path)
         await db.delete(artifact)
 
     await db.delete(job)
+    delete_job_storage(job_id)
     await db.commit()

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   adminDeleteSpace,
   adminUpdateSpace,
@@ -106,7 +106,6 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const deleteRef = useRef<string | null>(null)
 
   const filtered = spaces.filter((s) => {
     const q = query.toLowerCase()
@@ -124,7 +123,6 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
     } finally {
       setDeleting(false)
       setConfirmDeleteId(null)
-      deleteRef.current = null
     }
   }
 
@@ -184,10 +182,10 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
                         <>
                           <button
                             className="adm-btn-danger btn-sm"
-                            onClick={() => { deleteRef.current = space.id; void handleDelete(space.id) }}
+                            onClick={() => void handleDelete(space.id)}
                             disabled={deleting}
                           >
-                            {deleting && deleteRef.current === space.id ? 'Deleting…' : 'Confirm'}
+                            {deleting ? 'Deleting…' : 'Confirm'}
                           </button>
                           <button
                             className="adm-btn-ghost btn-sm"
