@@ -194,6 +194,22 @@ export function useSpaceEditor() {
     }
   }
 
+  /** Create a brand-new space and redirect to its edit page (shared by the
+   * create path of both save and publish). */
+  async function createAndRedirect(payload: SpacePayload) {
+    const created = await createCreatorSpace(payload)
+    navigate(`/creator/spaces/${created.id}/edit`, { replace: true })
+  }
+
+  /** Persist the payload to an existing space and immediately validate it,
+   * storing and returning the result. */
+  async function saveAndValidate(id: string, payload: SpacePayload): Promise<ValidationResult> {
+    await updateCreatorSpace(id, payload)
+    const result = await validateCreatorSpace(id)
+    setValidation(result)
+    return result
+  }
+
   async function handleSave(overrideStatus?: 'DRAFT' | 'PUBLISHED') {
     const payload = buildPayload(overrideStatus)
     if (!payload) return
@@ -204,8 +220,7 @@ export function useSpaceEditor() {
         await updateCreatorSpace(spaceId, payload)
         if (overrideStatus) setForm((f) => ({ ...f, status: overrideStatus }))
       } else {
-        const created = await createCreatorSpace(payload)
-        navigate(`/creator/spaces/${created.id}/edit`, { replace: true })
+        await createAndRedirect(payload)
       }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Save failed')
@@ -236,9 +251,7 @@ export function useSpaceEditor() {
     setValidation(null)
     try {
       if (isEdit && spaceId) {
-        await updateCreatorSpace(spaceId, payload)
-        const result = await validateCreatorSpace(spaceId)
-        setValidation(result)
+        const result = await saveAndValidate(spaceId, payload)
         if (result.valid) {
           setForm((f) => ({ ...f, status: 'PUBLISHED' }))
         } else {
@@ -247,8 +260,7 @@ export function useSpaceEditor() {
           setSaveError('Fix validation errors before publishing.')
         }
       } else {
-        const created = await createCreatorSpace(payload)
-        navigate(`/creator/spaces/${created.id}/edit`, { replace: true })
+        await createAndRedirect(payload)
       }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Publish failed')
