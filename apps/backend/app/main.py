@@ -3,6 +3,7 @@ cleanup task that expires old jobs and removes their artifact files every hour."
 from contextlib import asynccontextmanager
 
 import asyncio
+import logging
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -13,6 +14,8 @@ from app.db.session import get_db, AsyncSessionLocal
 from app.routers import admin, artifacts, creator, internal, jobs, me, spaces
 from app.schemas.common import HealthResponse
 from app.services.maintenance import cleanup_expired_jobs_and_artifacts
+
+logger = logging.getLogger(__name__)
 
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
@@ -34,9 +37,10 @@ async def run_cleanup_once() -> None:
     """Mark expired jobs EXPIRED and delete their artifact files from disk (D3)."""
     async with AsyncSessionLocal() as db:
         result = await cleanup_expired_jobs_and_artifacts(db)
-    print(
-        f"[cleanup] expired {result.jobs_expired} job(s), "
-        f"removed {result.artifacts_removed} artifact file(s)"
+    logger.info(
+        "[cleanup] expired %d job(s), removed %d artifact file(s)",
+        result.jobs_expired,
+        result.artifacts_removed,
     )
 
 
@@ -45,8 +49,8 @@ async def _cleanup_loop() -> None:
     while True:
         try:
             await run_cleanup_once()
-        except Exception as exc:
-            print(f"[cleanup] Error during cleanup: {exc}")
+        except Exception:
+            logger.exception("[cleanup] Error during cleanup")
         await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
 
 
@@ -54,13 +58,14 @@ async def _cleanup_loop() -> None:
 async def lifespan(app: FastAPI):
     """Manages application startup and shutdown. Starts the background cleanup loop
     on startup and cancels it cleanly when the server shuts down."""
+    logging.basicConfig(level=logging.INFO)
     cleanup_task = asyncio.create_task(_cleanup_loop())
 
     api_routes = [r for r in app.routes if getattr(r, "methods", None)]
-    print(f"[startup] Registered {len(api_routes)} API routes")
+    logger.info("[startup] Registered %d API routes", len(api_routes))
     for route in sorted(api_routes, key=lambda r: r.path):
         methods = ",".join(sorted(route.methods - {"HEAD", "OPTIONS"}))
-        print(f"  {methods:7} {route.path}")
+        logger.info("  %-7s %s", methods, route.path)
     yield
 
     # Graceful shutdown
