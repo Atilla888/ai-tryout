@@ -60,6 +60,7 @@ function JobDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const prevStatusRef = useRef('')
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   useEffect(() => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -69,8 +70,6 @@ function JobDetail() {
 
   useEffect(() => {
     if (!jobId) return
-
-    let timer: ReturnType<typeof setInterval> | undefined
 
     async function update() {
       if (!jobId) return
@@ -97,8 +96,8 @@ function JobDetail() {
           setArtifacts(outputs)
         }
 
-        if (jobIsFinished(data.status) && timer) {
-          clearInterval(timer)
+        if (jobIsFinished(data.status) && timerRef.current) {
+          clearInterval(timerRef.current)
         }
       } catch {
         setError('Failed to load job')
@@ -108,10 +107,10 @@ function JobDetail() {
     }
 
     update()
-    timer = setInterval(update, POLL_MS)
+    timerRef.current = setInterval(update, POLL_MS)
 
     return () => {
-      if (timer) clearInterval(timer)
+      if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [jobId])
 
