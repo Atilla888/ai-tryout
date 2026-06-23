@@ -122,6 +122,11 @@ async def list_jobs_by_status_service(db: AsyncSession, status: JobStatus) -> li
 
 
 async def list_jobs_by_user_service(db: AsyncSession, user_id: int) -> list[Job]:
+    """A single user's job history, newest first.
+
+    Eager-loads space and user so the rows can be serialized for /me/history
+    without extra queries.
+    """
     result = await db.execute(
         select(Job)
         .options(selectinload(Job.space), selectinload(Job.user))
@@ -132,6 +137,11 @@ async def list_jobs_by_user_service(db: AsyncSession, user_id: int) -> list[Job]
 
 
 async def start_job_service(db: AsyncSession, job: Job) -> Job:
+    """Move a job QUEUED -> STARTING when the orchestrator picks it up.
+
+    Clears the job's queue_position and renumbers the remaining queue so the
+    positions stay contiguous (1, 2, 3, ...).
+    """
     ensure_transition(job.status, JobStatus.STARTING)
     job.status = JobStatus.STARTING.value
     job.queue_position = None
@@ -211,6 +221,11 @@ async def update_job_progress_service(
 
 
 async def succeed_job_service(db: AsyncSession, job: Job) -> Job:
+    """Mark a running job SUCCEEDED (terminal).
+
+    Forces progress to 100% and stamps finished_at; backfills started_at if the
+    job somehow never reported a start.
+    """
     ensure_transition(job.status, JobStatus.SUCCEEDED)
     now = datetime.now(timezone.utc)
     job.status = JobStatus.SUCCEEDED.value
@@ -231,6 +246,11 @@ async def fail_job_service(
     error_code: str | None,
     error_message: str,
 ) -> Job:
+    """Mark a running job FAILED (terminal) and record why.
+
+    Stores error_code/error_message and stamps finished_at; backfills started_at
+    if the job never reported a start.
+    """
     ensure_transition(job.status, JobStatus.FAILED)
     now = datetime.now(timezone.utc)
     job.status = JobStatus.FAILED.value
