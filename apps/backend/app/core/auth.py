@@ -6,6 +6,7 @@ Keycloak for something else later without rewriting every endpoint.
 Each provider reads the Authorization header and returns the same claim shape.
 get_current_user then finds or creates the matching users row and returns it.
 """
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Annotated
@@ -18,6 +19,8 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.db.models import User
 from app.services.users import get_or_create_user_service
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -84,7 +87,13 @@ class OIDCAuthProvider(AuthProvider):
 
 
 class DevAuthProvider(AuthProvider):
-    """Skip Keycloak locally and pretend everyone is an admin."""
+    """Local-development fallback used whenever auth_provider is not 'oidc'.
+
+    It ignores the Authorization header entirely and authenticates every request
+    as the same admin user, so the app is usable without a running Keycloak.
+    This is intentional for local dev only and must never be enabled in
+    production — see the startup warning emitted by _build_provider().
+    """
 
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
         return NormalizedClaims(
@@ -98,6 +107,11 @@ class DevAuthProvider(AuthProvider):
 def _build_provider() -> AuthProvider:
     if settings.auth_provider == "oidc":
         return OIDCAuthProvider()
+    logger.warning(
+        "DevAuthProvider active - ALL users are treated as admin and the "
+        "Authorization header is ignored. Do not use in production "
+        "(set auth_provider='oidc')."
+    )
     return DevAuthProvider()
 
 
