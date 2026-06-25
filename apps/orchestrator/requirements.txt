@@ -1,0 +1,2 @@
+httpx==0.28.1
+kubernetes==34.1.0

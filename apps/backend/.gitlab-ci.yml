@@ -1,0 +1,62 @@
+# CI pipeline — GitLab CI for AI-Spaces-Tryout (Hof Spaces)
+# Runs integration tests on every Merge Request and every push to main.
+
+stages:
+  - test
+
+variables:
+  # Postgres service credentials — match TEST_DATABASE_URL in conftest.py
+  POSTGRES_DB: hofspaces_test
+  POSTGRES_USER: hofspaces_test
+  POSTGRES_PASSWORD: hofspaces_test
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+  # Passed to the test suite so it connects to the GitLab service container
+  TEST_DATABASE_URL: "postgresql+asyncpg://hofspaces_test:hofspaces_test@postgres:5432/hofspaces_test"
+
+# ---------------------------------------------------------------------------
+# Integration test job
+# ---------------------------------------------------------------------------
+integration-tests:
+  stage: test
+  image: python:3.11-slim
+
+  # Spin up a dedicated Postgres instance for this job only
+  services:
+    - name: postgres:15-alpine
+      alias: postgres
+
+  # Run on every MR and on pushes to main / develop
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+  before_script:
+    # Install dependencies
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install pytest pytest-asyncio httpx asyncpg sqlalchemy[asyncio]
+
+    # Wait for Postgres to be ready (up to 30 s)
+    - |
+      echo "Waiting for Postgres..."
+      for i in $(seq 1 30); do
+        pg_isready -h postgres -U hofspaces_test && break
+        sleep 1
+      done
+
+  script:
+    - pytest tests/integration/ -v --tb=short
+
+  # Publish JUnit XML so GitLab shows test results in the MR
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+    expire_in: 7 days
+
+  # Generate JUnit report (add --junitxml to the script above if needed)
+  # Uncomment the line below and replace the script block:
+  # script:
+  #   - pytest tests/integration/ -v --tb=short --junitxml=report.xml

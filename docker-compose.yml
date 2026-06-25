@@ -1,76 +1,94 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18
     restart: unless-stopped
-    env_file: .env
+    container_name: ai_spaces_postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+      POSTGRES_USER: ${POSTGRES_USER:-aispacesuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aispacespass}
+      POSTGRES_DB: ${POSTGRES_DB:-aispaces}
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    container_name: ai_spaces_keycloak
     restart: unless-stopped
-    env_file: .env
+    command:
+      - start-dev
+      - --import-realm
+      - --hostname=http://localhost:8080
+      - --hostname-strict=false
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-    volumes:
-      - pgadmin-data:/var/lib/pgadmin
-      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     ports:
-      - "5050:80"
+      - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./infra/keycloak/ai-spaces-realm.json:/opt/keycloak/data/import/ai-spaces-realm.json:ro
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    image: ai-spaces-backend:dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+      ALEMBIC_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+
+      AUTH_PROVIDER: oidc
+      OIDC_ISSUER: http://localhost:8080/realms/ai-spaces
+      OIDC_JWKS_URL: http://keycloak:8080/realms/ai-spaces/protocol/openid-connect/certs
+      OIDC_CLIENT_ID: ai-spaces-frontend
+      OIDC_ALGORITHM: RS256
+      OIDC_VERIFY_AUDIENCE: "false"
+
+      ARTIFACT_STORAGE_ROOT: /app/storage
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-changeme-internal-token}
     depends_on:
       postgres:
         condition: service_healthy
-
-  minio:
-    image: minio/minio:latest
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio-data:/data
+      keycloak:
+        condition: service_started
     ports:
-      - "9000:9000"
-      - "9001:9001"
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./apps/backend:/app
+      - storage_data:/app/storage
 
-  minio-setup:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set aispaces http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
-      mc mb --ignore-existing aispaces/inputs;
-      mc mb --ignore-existing aispaces/outputs;
-      mc mb --ignore-existing aispaces/progress;
-      exit 0;
-      "
-    env_file: .env
+  orchestrator:
+    build:
+      context: ./apps/orchestrator
+      dockerfile: Dockerfile
+    image: ai-spaces-orchestrator:dev
+    restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      API_BASE_URL: http://backend:8000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-changeme-internal-token}
+      # subprocess backend runs the bundled reference/fake runner; switch to
+      # "kubernetes" (with cluster access + K8S_NAMESPACE) for real workloads.
+      RUNNER_BACKEND: ${RUNNER_BACKEND:-subprocess}
+      RUNNER_SCRIPT: /app/fake_runner.py
+      CONCURRENCY_LIMIT: "2"
+      POLL_INTERVAL_SECONDS: "3"
+    depends_on:
+      backend:
+        condition: service_started
+    volumes:
+      - ./apps/orchestrator:/app
 
 volumes:
-  postgres-data:
-  pgadmin-data:
-  minio-data:
+  postgres_data:
+  storage_data:
+  keycloak_data:
