@@ -22,7 +22,7 @@ git --version
 
 ### 1.2 Docker Desktop
 
-**What it is**: Docker lets you run applications inside isolated "containers" — lightweight virtual machines that package an application with all its dependencies. Instead of installing Python, PostgreSQL, Node.js, MinIO, etc. on your machine, each one runs in its own container. Docker Desktop includes both the Docker engine and Docker Compose.
+**What it is**: Docker lets you run applications inside isolated "containers" — lightweight virtual machines that package an application with all its dependencies. Instead of installing Python, PostgreSQL, Node.js, Keycloak, etc. on your machine, each one runs in its own container. Docker Desktop includes both the Docker engine and Docker Compose.
 
 **Why Docker Compose matters**: Docker Compose is a tool that starts multiple containers together with one command. Our project has several services (frontend, backend, database, file storage), and Docker Compose starts all of them with `docker compose up`.
 
@@ -85,7 +85,6 @@ Every technology in this project exists because it solves a specific problem. No
 | **FastAPI** | A Python web framework for building APIs (the backend endpoints that the frontend talks to). | Fast to develop, automatic API documentation (Swagger UI at `localhost:8000/docs`), built-in support for async operations and file uploads. |
 | **Uvicorn** | The server that actually runs the FastAPI application. | The recommended server for FastAPI. Handles incoming HTTP requests and routes them to your code. |
 | **SQLAlchemy** | A Python library that lets you interact with the PostgreSQL database using Python objects instead of writing raw SQL queries. | You write `request.status = "completed"` and SQLAlchemy translates it to the correct SQL statement. Reduces errors and makes database code readable. |
-| **boto3** | The AWS SDK for Python — used to upload and download files to/from MinIO (and AWS S3, since they use the same API). | Standard library for S3-compatible storage. Same code works against MinIO locally and AWS S3 in production. |
 | **kubernetes Python client** | A Python library that talks to the Kubernetes API to create, monitor, and delete Jobs (short-lived containers) from your backend code. | This is how the backend starts a model container when a user submits a request. The same code works on a local cluster and in production. |
 
 **Where it runs**: during development, on your machine via `uvicorn app.main:app --reload`. In production, inside a Docker container.
@@ -99,35 +98,33 @@ Every technology in this project exists because it solves a specific problem. No
 **What it stores**:
 
 - **`models` table**: one row per registered AI model — name, description, Docker image name, input type, output type.
-- **`requests` table**: one row per user request — request ID, which model, status (starting / processing / completed / failed), progress percentage, MinIO paths for input and output files, timestamps.
+- **`requests` table**: one row per user request — request ID, which model, status (starting / processing / completed / failed), progress percentage, filesystem paths for input and output files, timestamps.
 
 **How you interact with it**: your Python code uses SQLAlchemy. You never write SQL manually in normal development. For debugging, you use **pgAdmin** — a web UI that runs as a Docker container at `localhost:5050`, where you can browse tables, view rows, and run queries visually.
 
 **Where it runs**: always inside a Docker container. You never install PostgreSQL on your machine.
 
-### 2.4 File Storage — MinIO
+### 2.4 File Storage — Filesystem (NFS)
 
-**What it is**: an S3-compatible object storage server. Think of it as a network-accessible file system. You upload files to it over HTTP, and any container in the network can download them — regardless of which machine that container runs on.
+**What it is**: artifact files (inputs uploaded by users and outputs produced by model containers) are stored on the host filesystem, mounted into the backend container as a Docker volume (`storage_data:/app/storage`). In a production Kubernetes deployment this volume is backed by an NFS share so every node can access the same files.
 
-**Why we need it instead of saving files to disk**: the project targets Kubernetes, where model containers can start on any machine in a cluster. If the backend saves a file to its own hard drive, a model container on a different machine cannot access it. MinIO solves this — every container accesses files through MinIO over the network.
+**Why not object storage (S3/MinIO)**: the current deployment uses a single-node setup where a shared volume is sufficient. Introducing an object storage service (MinIO) would add operational complexity without benefit at this scale.
 
 **How it works in practice**:
 
-1. User uploads an image through the frontend.
-2. The backend receives it and uploads it to MinIO (into the `inputs` bucket).
-3. The backend starts a model container and tells it where to find the file in MinIO (via environment variables).
-4. The model container downloads the input from MinIO, runs inference, and uploads the result back to MinIO (into the `outputs` bucket).
-5. The backend fetches the result from MinIO and serves it to the frontend for preview/download.
+1. User uploads a file through the frontend.
+2. The backend receives it and writes it to the local storage root (controlled by `ARTIFACT_STORAGE_ROOT`, default `/app/storage`).
+3. The backend starts a model container (Kubernetes Job) and tells it the file path via environment variables.
+4. The model container reads the input from the shared volume, runs inference, and writes the result back to the same volume.
+5. When the job finishes, the backend serves the result file directly — there are **no pre-signed URLs**. The frontend calls `/artifacts/{id}/preview` or `/artifacts/{id}/download` and the backend streams the file from disk.
 
-**Web UI**: MinIO has a built-in web console at `localhost:9001` where you can browse buckets and files visually — like a file explorer for your stored files.
-
-**Where it runs**: always inside a Docker container. In production, you could swap it for AWS S3 with zero code changes.
+**Where it runs**: the storage volume is declared in `docker-compose.yml` as `storage_data` and mounted into both the backend container and (when using Kubernetes) into model job pods.
 
 ### 2.5 Container Orchestration — Kubernetes
 
 **What it is**: the mechanism by which the backend starts model containers on demand.
 
-The backend uses the `kubernetes` Python client to create a Kubernetes **Job** — a short-lived container that runs once and exits. When a user submits a request, the backend creates a Job with the correct container image and environment variables (MinIO credentials, input file location). Kubernetes decides which node to run it on, starts the container, and the backend monitors the Job's status (pending → running → succeeded / failed).
+The backend uses the `kubernetes` Python client to create a Kubernetes **Job** — a short-lived container that runs once and exits. When a user submits a request, the backend creates a Job with the correct container image and environment variables (storage path, input file location). Kubernetes decides which node to run it on, starts the container, and the backend monitors the Job's status (pending → running → succeeded / failed).
 
 **We use Kubernetes from day one, not just in production.** Docker Desktop includes a built-in single-node Kubernetes cluster you can enable in Settings → Kubernetes → Enable Kubernetes. Alternatively, **minikube** creates a local cluster. The exact same backend code, the same Python library calls, and the same Job manifests work on your local single-node cluster and on a multi-node production cluster. No "switching" or rewriting needed.
 
@@ -183,7 +180,7 @@ ai-spaces/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py                  # FastAPI app creation, startup events, middleware
-│   │   ├── config.py                # Settings: database URL, MinIO credentials, etc.
+│   │   ├── config.py                # Settings: database URL, storage root, auth config, etc.
 │   │   ├── database.py              # SQLAlchemy engine and session setup
 │   │   ├── api/                     # Route handlers (one file per resource)
 │   │   │   ├── __init__.py
@@ -199,12 +196,12 @@ ai-spaces/
 │   │   │   └── request.py           # RequestCreate, RequestResponse schemas
 │   │   └── services/                # Business logic
 │   │       ├── __init__.py
-│   │       ├── storage.py           # MinIO upload/download operations
+│   │       ├── storage.py           # Filesystem artifact read/write operations
 │   │       └── orchestrator.py      # Start/stop/monitor model containers
 │   ├── tests/                       # pytest test files
 │   │   ├── __init__.py
 │   │   ├── test_requests.py         # Unit tests for request lifecycle
-│   │   └── test_storage.py          # Unit tests for MinIO operations
+│   │   └── test_storage.py          # Unit tests for artifact storage operations
 │   ├── alembic/                     # Database migration files (for schema changes)
 │   │   └── versions/                # Individual migration scripts
 │   ├── alembic.ini                  # Alembic configuration
@@ -214,16 +211,16 @@ ai-spaces/
 ├── models/                          # One subfolder per AI model
 │   ├── yolo-v11/                    # Sprint 1: fully implemented, runs on CPU
 │   │   ├── Dockerfile
-│   │   ├── inference.py             # Downloads input from MinIO, runs YOLO, uploads result
-│   │   └── requirements.txt         # ultralytics, boto3
+│   │   ├── inference.py             # Reads input from shared volume, runs YOLO, writes result
+│   │   └── requirements.txt         # ultralytics
 │   ├── ltx-video/                   # Sprint 2: video generation via cloud GPU API
 │   │   ├── Dockerfile
-│   │   ├── inference.py             # Calls cloud GPU API (e.g., Replicate), uploads result to MinIO
-│   │   └── requirements.txt         # replicate (or huggingface_hub), boto3
+│   │   ├── inference.py             # Calls cloud GPU API (e.g., Replicate), writes result to shared volume
+│   │   └── requirements.txt         # replicate (or huggingface_hub)
 │   └── sam-3d/                      # Sprint 2: 3D object generation via cloud GPU API
 │       ├── Dockerfile
-│       ├── inference.py             # Calls cloud GPU API, uploads GLTF result to MinIO
-│       └── requirements.txt         # replicate (or huggingface_hub), boto3
+│       ├── inference.py             # Calls cloud GPU API, writes GLTF result to shared volume
+│       └── requirements.txt         # replicate (or huggingface_hub)
 │
 ├── k8s/                             # Kubernetes manifests (used from day one)
 │   ├── namespace.yaml               # Kubernetes namespace for the project
@@ -231,7 +228,7 @@ ai-spaces/
 │   ├── backend-deployment.yaml      # Backend deployment and service (for full K8s deployment)
 │   ├── frontend-deployment.yaml     # Frontend deployment and service
 │   ├── postgres-deployment.yaml     # PostgreSQL deployment with persistent volume
-│   └── minio-deployment.yaml        # MinIO deployment with persistent volume
+│   └── storage-pvc.yaml             # PersistentVolumeClaim for the artifact storage NFS share
 │
 ├── docs/                            # Project documentation
 │   ├── requirements.md              # Requirements specification
@@ -253,29 +250,32 @@ When you run `docker compose up`, Docker starts the platform services. Model con
 ┌──────────────────────────────────────────────────────────────────────┐
 │  Docker Compose (platform services)                                  │
 │                                                                      │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐        │
-│  │ frontend  │  │ backend   │  │ postgres  │  │  minio    │        │
-│  │ (Nginx)   │  │ (FastAPI) │  │           │  │           │        │
-│  │ port 3000 │─▶│ port 8000 │─▶│ port 5432 │  │ port 9000 │        │
-│  └───────────┘  │           │─▶│           │  │ port 9001 │        │
-│                 │           │─▶│           │  │ (web UI)  │        │
-│                 └───────────┘  └───────────┘  └───────────┘        │
-│                      │                              ▲               │
-│  ┌───────────┐       │                              │               │
-│  │ pgadmin   │       │                              │               │
-│  │ port 5050 │       │                              │               │
-│  └───────────┘       │                              │               │
-└──────────────────────│──────────────────────────────│───────────────┘
-                       │ creates K8s Job              │
-                       ▼                              │
+│  ┌───────────┐  ┌─────────────┐  ┌───────────┐  ┌──────────────┐   │
+│  │ frontend  │  │  backend    │  │ postgres  │  │  keycloak    │   │
+│  │ (Nginx)   │  │  (FastAPI)  │  │           │  │  (auth/OIDC) │   │
+│  │ port 3000 │─▶│  port 8000  │─▶│ port 5432 │  │  port 8080   │   │
+│  └───────────┘  │             │  └───────────┘  └──────────────┘   │
+│                 │             │                                      │
+│                 │  ┌──────────────────────────┐                     │
+│                 │  │  orchestrator            │                     │
+│                 │  │  (polls backend, starts  │                     │
+│                 └─▶│   model jobs)            │                     │
+│                    └──────────────────────────┘                     │
+│                            │                                         │
+│                    ┌───────▼──────────────┐                         │
+│                    │  storage_data volume │                         │
+│                    │  (NFS in production) │                         │
+│                    └──────────────────────┘                         │
+└──────────────────────────────────────────────────────────────────────┘
+                       orchestrator creates K8s Job
+                       ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  Kubernetes Cluster (local: Docker Desktop / minikube)               │
 │                                                                      │
 │  ┌──────────────────────┐                                            │
-│  │ Model Job (temporary)│  downloads input from MinIO,               │
-│  │ e.g. YOLO v11        │──────────────────────────┘                 │
-│  │                      │  uploads result to MinIO,                  │
-│  │                      │  then exits                                │
+│  │ Model Job (temporary)│  reads input from shared volume,          │
+│  │ e.g. YOLO v11        │  writes result to shared volume,          │
+│  │                      │  then exits                               │
 │  └──────────────────────┘                                            │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -286,10 +286,9 @@ When you run `docker compose up`, Docker starts the platform services. Model con
 |---|---|
 | `http://localhost:3000` | The frontend (React application) |
 | `http://localhost:8000/docs` | Backend API documentation (auto-generated Swagger UI) |
-| `http://localhost:5050` | pgAdmin — browse and inspect the PostgreSQL database |
-| `http://localhost:9001` | MinIO console — browse uploaded files and result files |
+| `http://localhost:8080` | Keycloak admin console — manage users and realm configuration |
 
-Inside the Docker network, containers refer to each other by service name (e.g., the backend connects to PostgreSQL at `postgres:5432` and MinIO at `minio:9000`). These internal addresses are configured in the `docker-compose.yml` file.
+Inside the Docker network, containers refer to each other by service name (e.g., the backend connects to PostgreSQL at `postgres:5432` and Keycloak at `keycloak:8080`). These internal addresses are configured in the `docker-compose.yml` file.
 
 ---
 
@@ -299,52 +298,54 @@ This is the complete sequence of what happens when a user uploads an image for Y
 
 ```
 Step 1: User opens http://localhost:3000
-        → Frontend serves the landing page with model cards
+        → Frontend serves the landing page with space cards
 
-Step 2: User clicks on "YOLO v11" card
-        → Frontend navigates to the submit page for YOLO
+Step 2: User clicks on a space card (e.g. "YOLO v11")
+        → Frontend navigates to the space's job submission page
 
 Step 3: User selects an image file and clicks "Submit"
-        → Frontend sends the file to POST /api/requests with model_id=yolo-v11
+        → Frontend sends the file to POST /jobs as multipart/form-data
 
 Step 4: Backend receives the file
-        → Uploads the image to MinIO at inputs/{request_id}/image.jpg
-        → Creates a row in the requests table: status="starting", progress=0
-        → Creates a Kubernetes Job using the model-job-template with:
+        → Writes the image to the shared storage volume:
+            {ARTIFACT_STORAGE_ROOT}/{job_id}/inputs/image.jpg
+        → Creates a row in the jobs table: status=QUEUED
+        → Returns the job_id to the frontend
+
+Step 5: The orchestrator picks up the queued job
+        → Calls GET /internal/jobs (pending jobs list)
+        → Creates a Kubernetes Job using the job template with:
             Container image: ai-spaces-yolo-v11
             Environment variables:
-              MINIO_ENDPOINT=minio:9000
-              MINIO_ACCESS_KEY=minioadmin
-              MINIO_SECRET_KEY=minioadmin
-              INPUT_BUCKET=inputs
-              INPUT_KEY={request_id}/image.jpg
-              OUTPUT_BUCKET=outputs
-              OUTPUT_PREFIX={request_id}/
-              REQUEST_ID={request_id}
-        → Returns the request_id to the frontend
+              ARTIFACT_STORAGE_ROOT=/app/storage
+              INPUT_PATH={job_id}/inputs/image.jpg
+              OUTPUT_DIR={job_id}/outputs/
+              JOB_ID={job_id}
+              BACKEND_URL=http://backend:8000
+              INTERNAL_SERVICE_TOKEN=...
 
-Step 5: The model page shows progress below the generate button
-        → Every 2-3 seconds, calls GET /api/requests/{request_id}
-        → Backend reads the progress file from MinIO (progress/{request_id}.json)
-           and the K8s Job status, returns current state to frontend
+Step 6: The job detail page shows progress
+        → Every 2 seconds, calls GET /jobs/{job_id}
+        → Backend returns current status, progress_percent, progress_message
 
-Step 6: Inside the YOLO v11 K8s Job
-        → Downloads image from MinIO (inputs/{request_id}/image.jpg)
-        → Writes progress: {"percent": 10, "step": "Loading model"}
+Step 7: Inside the YOLO v11 K8s Job
+        → Reads image from shared volume (inputs/{job_id}/image.jpg)
+        → Reports progress via PATCH /internal/jobs/{id}/progress
         → Runs YOLO v11 detection
-        → Writes progress: {"percent": 80, "step": "Running detection"}
-        → Uploads annotated image to MinIO (outputs/{request_id}/result.jpg)
-        → Writes progress: {"percent": 100, "step": "Done"}
+        → Writes annotated image to shared volume (outputs/{job_id}/result.jpg)
+        → Reports completion via PATCH /internal/jobs/{id}/succeed
         → Container exits with code 0
 
-Step 7: Backend detects that the K8s Job succeeded
-        → Updates the database row: status="completed"
+Step 8: Backend detects the job succeeded (via the internal PATCH)
+        → Updates the database row: status=SUCCEEDED
+        → Creates an artifact row pointing to the output file
 
-Step 8: The model page sees status="completed"
-        → Calls GET /api/requests/{request_id}/result
-        → Backend fetches result.jpg from MinIO and streams it to the browser
-        → The result appears on the same page below the input area,
-           with a preview and a download button
+Step 9: The job detail page sees status=SUCCEEDED
+        → Calls GET /jobs/{job_id}/artifacts
+        → Displays each artifact using ArtifactViewer
+        → Preview: GET /artifacts/{artifact_id}/preview  (backend streams the file)
+        → Download: GET /artifacts/{artifact_id}/download
+        → No pre-signed URLs — the backend serves the file directly from disk
 ```
 
 ---
@@ -355,25 +356,29 @@ The project uses a `.env` file (not committed to git) to store configuration. Ea
 
 ```bash
 # PostgreSQL
-POSTGRES_USER=aispaces
-POSTGRES_PASSWORD=aispaces_dev
+POSTGRES_USER=aispacesuser
+POSTGRES_PASSWORD=aispacespass
 POSTGRES_DB=aispaces
-DATABASE_URL=postgresql://aispaces:aispaces_dev@postgres:5432/aispaces
+DATABASE_URL=postgresql+asyncpg://aispacesuser:aispacespass@postgres:5432/aispaces
 
-# MinIO
-MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=minioadmin
-MINIO_ENDPOINT=minio:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-
-# pgAdmin
-PGADMIN_DEFAULT_EMAIL=admin@aispaces.local
-PGADMIN_DEFAULT_PASSWORD=admin
+# Keycloak (identity provider)
+# Admin UI at http://localhost:8080 — username: admin, password: admin (dev only)
 
 # Backend
-BACKEND_HOST=0.0.0.0
 BACKEND_PORT=8000
+
+# Artifact storage — path inside the backend container (mounted from Docker volume)
+ARTIFACT_STORAGE_ROOT=/app/storage
+
+# Internal service token — shared secret between backend and orchestrator
+INTERNAL_SERVICE_TOKEN=changeme-internal-token
+
+# Auth (OIDC / Keycloak)
+AUTH_PROVIDER=oidc
+OIDC_ISSUER=http://localhost:8080/realms/ai-spaces
+OIDC_JWKS_URL=http://keycloak:8080/realms/ai-spaces/protocol/openid-connect/certs
+OIDC_CLIENT_ID=ai-spaces-frontend
+OIDC_VERIFY_AUDIENCE=false
 ```
 
 ---
@@ -386,7 +391,7 @@ BACKEND_PORT=8000
 docker compose up --build
 ```
 
-This builds all Docker images (frontend, backend) and starts all containers (frontend, backend, PostgreSQL, MinIO, pgAdmin). The `--build` flag ensures images are rebuilt if code changed. First run will take several minutes to download base images. Subsequent runs are fast.
+This builds all Docker images (frontend, backend, orchestrator) and starts all containers (frontend, backend, PostgreSQL, Keycloak, orchestrator). The `--build` flag ensures images are rebuilt if code changed. First run will take several minutes to download base images. Subsequent runs are fast.
 
 ### Stopping the platform
 
@@ -394,7 +399,7 @@ This builds all Docker images (frontend, backend) and starts all containers (fro
 docker compose down
 ```
 
-Add `-v` to also delete stored data (database contents, MinIO files):
+Add `-v` to also delete stored data (database contents, artifact files, Keycloak data):
 
 ```bash
 docker compose down -v
@@ -408,7 +413,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-The `--reload` flag means the server restarts automatically when you save a file. You still need PostgreSQL and MinIO running (via Docker Compose or standalone containers).
+The `--reload` flag means the server restarts automatically when you save a file. You still need PostgreSQL and Keycloak running (via Docker Compose or standalone containers).
 
 ### Running the frontend locally (outside Docker, for faster development)
 
@@ -458,7 +463,7 @@ kubectl logs job/yolo-v11-abc123 -n ai-spaces
 
 ```bash
 docker compose logs backend --follow
-docker compose logs minio --follow
+docker compose logs orchestrator --follow
 ```
 
 ### Accessing the PostgreSQL database directly (for debugging)
@@ -496,8 +501,8 @@ These tables are created by SQLAlchemy when the backend starts (or via Alembic m
 | status | text | One of: `starting`, `processing`, `completed`, `failed` |
 | progress | integer | 0–100 percentage |
 | progress_step | text | Human-readable step, e.g., "Running detection" |
-| input_key | text | MinIO path to the uploaded input file |
-| output_key | text | MinIO path to the result file (null until completed) |
+| input_key | text | Storage path to the uploaded input file |
+| output_key | text | Storage path to the result file (null until completed) |
 | error_message | text | Error description if status is `failed` (null otherwise) |
 | container_id | text | Docker container ID (for monitoring) |
 | created_at | timestamp | When the request was submitted |
@@ -513,25 +518,23 @@ Every AI model in the platform is packaged as a Docker container that follows th
 
 | Variable | Example value | Purpose |
 |---|---|---|
-| `REQUEST_ID` | `a1b2c3d4` | Unique identifier for this request |
-| `MINIO_ENDPOINT` | `minio:9000` | Where MinIO is reachable |
-| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO authentication |
-| `MINIO_SECRET_KEY` | `minioadmin` | MinIO authentication |
-| `INPUT_BUCKET` | `inputs` | MinIO bucket containing the input file |
-| `INPUT_KEY` | `a1b2c3d4/image.jpg` | Path to the input file within the bucket |
-| `OUTPUT_BUCKET` | `outputs` | MinIO bucket to upload results to |
-| `OUTPUT_PREFIX` | `a1b2c3d4/` | Path prefix for output files |
+| `JOB_ID` | `a1b2c3d4` | Unique identifier for this job |
+| `ARTIFACT_STORAGE_ROOT` | `/app/storage` | Root of the shared storage volume |
+| `INPUT_PATH` | `a1b2c3d4/inputs/image.jpg` | Relative path to the input file within the storage root |
+| `OUTPUT_DIR` | `a1b2c3d4/outputs/` | Relative directory to write output files into |
+| `BACKEND_URL` | `http://backend:8000` | Backend API base URL (for progress reporting) |
+| `INTERNAL_SERVICE_TOKEN` | `...` | Shared secret for internal API calls |
 
 ### What the container must do
 
-1. Connect to MinIO using the provided credentials.
-2. Download the input file from `INPUT_BUCKET/INPUT_KEY`.
-3. Run the model inference.
-4. Upload result file(s) to `OUTPUT_BUCKET/OUTPUT_PREFIX/`.
-5. Periodically update progress by uploading a JSON file to `progress/{REQUEST_ID}.json` in MinIO:
+1. Read the input file from `{ARTIFACT_STORAGE_ROOT}/{INPUT_PATH}`.
+2. Run the model inference.
+3. Write result file(s) to `{ARTIFACT_STORAGE_ROOT}/{OUTPUT_DIR}`.
+4. Periodically report progress via `PATCH {BACKEND_URL}/internal/jobs/{JOB_ID}/progress`:
    ```json
-   {"percent": 42, "step": "Running detection"}
+   {"progress_percent": 42, "progress_message": "Running detection"}
    ```
+5. Report completion via `PATCH {BACKEND_URL}/internal/jobs/{JOB_ID}/succeed`.
 6. Exit with code 0 on success, non-zero on failure.
 
 ### Adding a new model
@@ -550,10 +553,10 @@ To add a new model to the platform:
 
 ### Day-to-day development
 
-For faster iteration, you run the frontend and backend directly on your machine (not in Docker), while PostgreSQL, MinIO, and pgAdmin run in Docker:
+For faster iteration, you run the frontend and backend directly on your machine (not in Docker), while PostgreSQL and Keycloak run in Docker:
 
 ```bash
-docker compose up postgres minio pgadmin
+docker compose up postgres keycloak
 ```
 
 Then in separate terminals:
