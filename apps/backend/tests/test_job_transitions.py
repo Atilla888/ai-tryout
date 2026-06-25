@@ -196,7 +196,9 @@ async def test_recalculate_queue_positions(db_session):
     job1 = await _load_job(db_session, j1)
     await cancel_job_service(db_session, job1)
     await recalculate_queue_positions(db_session)
-    result = await db_session.execute(select(Job).where(Job.status == JobStatus.QUEUED.value).order_by(Job.queue_position))
+    result = await db_session.execute(
+        select(Job).where(Job.status == JobStatus.QUEUED.value).order_by(Job.queue_position)
+    )
     remaining = list(result.scalars().all())
     assert [j.queue_position for j in remaining] == [1, 2]
     # j2/j3 are submit responses carrying public_id UUIDs.

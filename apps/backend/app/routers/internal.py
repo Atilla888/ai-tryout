@@ -1,5 +1,4 @@
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
@@ -7,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.service_token import verify_internal_service_token
 from app.db.session import get_db
-from app.schemas.artifacts import ArtifactRead
 from app.schemas.internal import (
     InternalArtifactRead,
     InternalJobRead,

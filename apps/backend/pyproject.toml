@@ -9,3 +9,16 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# alembic env.py must set sys.path and load models before standard imports
+"alembic/env.py" = ["E402", "F403", "F401"]
+# alembic migration files have auto-generated long lines
+"alembic/versions/*.py" = ["E501"]
+# test conftest.py must set os.environ before importing app modules
+"tests/conftest.py" = ["E402"]
+"tests/integration/conftest.py" = ["E402"]

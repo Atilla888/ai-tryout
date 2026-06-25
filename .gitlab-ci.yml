@@ -1,6 +1,84 @@
 stages:
+  - lint
   - test
+  - build
 
+# ---------------------------------------------------------------------------
+# Backend — ruff (lint)
+# ---------------------------------------------------------------------------
+backend-lint:
+  stage: lint
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet ruff
+  script:
+    - ruff check apps/backend
+  rules:
+    - changes:
+        - apps/backend/**/*
+
+# ---------------------------------------------------------------------------
+# Frontend — eslint (lint)
+# ---------------------------------------------------------------------------
+frontend-lint:
+  stage: lint
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - apps/frontend/package-lock.json
+    paths:
+      - apps/frontend/node_modules
+  before_script:
+    - cd apps/frontend
+    - npm ci
+  script:
+    - npm run lint
+  rules:
+    - changes:
+        - apps/frontend/**/*
+
+# ---------------------------------------------------------------------------
+# Backend — pytest integration tests
+# ---------------------------------------------------------------------------
+backend-test:
+  stage: test
+  image: python:3.11-slim
+  variables:
+    POSTGRES_DB: hofspaces_test
+    POSTGRES_USER: hofspaces_test
+    POSTGRES_PASSWORD: hofspaces_test
+    POSTGRES_HOST_AUTH_METHOD: trust
+    TEST_DATABASE_URL: "postgresql+asyncpg://hofspaces_test:hofspaces_test@postgres:5432/hofspaces_test"
+  services:
+    - name: postgres:15-alpine
+      alias: postgres
+  before_script:
+    - cd apps/backend
+    - pip install --quiet --upgrade pip
+    - pip install --quiet -r requirements.txt
+    - pip install --quiet pytest pytest-asyncio httpx asyncpg sqlalchemy[asyncio]
+    - |
+      echo "Waiting for Postgres..."
+      for i in $(seq 1 30); do
+        pg_isready -h postgres -U hofspaces_test && break
+        sleep 1
+      done
+  script:
+    - pytest tests/integration/ -v --tb=short
+  artifacts:
+    when: always
+    reports:
+      junit: apps/backend/report.xml
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# ---------------------------------------------------------------------------
+# Frontend — vitest unit tests
+# ---------------------------------------------------------------------------
 frontend-test:
   stage: test
   image: node:22-alpine
@@ -16,5 +94,32 @@ frontend-test:
   script:
     - npm run test
   rules:
+    - changes:
+        - apps/frontend/**/*
+
+# ---------------------------------------------------------------------------
+# Frontend — production build (TypeScript + Vite)
+# ---------------------------------------------------------------------------
+frontend-build:
+  stage: build
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - apps/frontend/package-lock.json
+    paths:
+      - apps/frontend/node_modules
+  before_script:
+    - cd apps/frontend
+    - npm ci
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - apps/frontend/dist/
+    expire_in: 1 day
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
     - changes:
         - apps/frontend/**/*

@@ -22,7 +22,10 @@ async def create_space(db: db_dependency, data: SpaceCreate, creator: CreatorUse
         return await create_space_service(db=db, data=data, owner_id=creator.id)
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Space with this slug already exists for this owner")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Space with this slug already exists for this owner",
+        )
 
 
 @router.get("", response_model=list[SpaceRead], status_code=status.HTTP_200_OK)

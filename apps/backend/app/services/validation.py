@@ -31,9 +31,15 @@ def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
 
         name = item.get("name")
         if not name or not isinstance(name, str):
-            errors.append(FieldError(field=f"{prefix}.name", message="'name' is required and must be a non-empty string"))
+            errors.append(FieldError(
+                field=f"{prefix}.name",
+                message="'name' is required and must be a non-empty string",
+            ))
         elif not _NAME_RE.match(name):
-            errors.append(FieldError(field=f"{prefix}.name", message="'name' must start with a letter or underscore and contain only letters, digits, or underscores"))
+            errors.append(FieldError(
+                field=f"{prefix}.name",
+                message="'name' must start with a letter or underscore, then only letters, digits, or underscores",
+            ))
         elif name in seen_names:
             errors.append(FieldError(field=f"{prefix}.name", message=f"Duplicate input name '{name}'"))
         else:
@@ -43,17 +49,29 @@ def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
         if not input_type or not isinstance(input_type, str):
             errors.append(FieldError(field=f"{prefix}.type", message="'type' is required"))
         elif input_type not in _ALLOWED_INPUT_TYPES:
-            errors.append(FieldError(field=f"{prefix}.type", message=f"'type' must be one of: {', '.join(sorted(_ALLOWED_INPUT_TYPES))}"))
+            errors.append(FieldError(
+                field=f"{prefix}.type",
+                message=f"'type' must be one of: {', '.join(sorted(_ALLOWED_INPUT_TYPES))}",
+            ))
         elif input_type == "select":
             options = item.get("options")
             if not isinstance(options, list) or len(options) == 0:
-                errors.append(FieldError(field=f"{prefix}.options", message="'options' is required and must be a non-empty list for type 'select'"))
+                errors.append(FieldError(
+                    field=f"{prefix}.options",
+                    message="'options' is required and must be a non-empty list for type 'select'",
+                ))
             elif not all(isinstance(o, str) and o for o in options):
-                errors.append(FieldError(field=f"{prefix}.options", message="All 'options' entries must be non-empty strings"))
+                errors.append(FieldError(
+                    field=f"{prefix}.options",
+                    message="All 'options' entries must be non-empty strings",
+                ))
 
         label = item.get("label")
         if not label or not isinstance(label, str):
-            errors.append(FieldError(field=f"{prefix}.label", message="'label' is required and must be a non-empty string"))
+            errors.append(FieldError(
+                field=f"{prefix}.label",
+                message="'label' is required and must be a non-empty string",
+            ))
 
         required = item.get("required")
         if required is not None and not isinstance(required, bool):
@@ -75,16 +93,25 @@ def _validate_runner_config(runner_config: dict[str, Any], container_image: str)
     timeout = runner_config.get("timeout_seconds")
     if timeout is not None:
         if not isinstance(timeout, int) or isinstance(timeout, bool):
-            errors.append(FieldError(field="runner_config.timeout_seconds", message="'timeout_seconds' must be an integer"))
+            errors.append(FieldError(
+                field="runner_config.timeout_seconds",
+                message="'timeout_seconds' must be an integer",
+            ))
         elif not (1 <= timeout <= 86400):
-            errors.append(FieldError(field="runner_config.timeout_seconds", message="'timeout_seconds' must be between 1 and 86400"))
+            errors.append(FieldError(
+                field="runner_config.timeout_seconds",
+                message="'timeout_seconds' must be between 1 and 86400",
+            ))
 
     memory = runner_config.get("memory_mb")
     if memory is not None:
         if not isinstance(memory, int) or isinstance(memory, bool):
             errors.append(FieldError(field="runner_config.memory_mb", message="'memory_mb' must be an integer"))
         elif not (64 <= memory <= 65536):
-            errors.append(FieldError(field="runner_config.memory_mb", message="'memory_mb' must be between 64 and 65536"))
+            errors.append(FieldError(
+                field="runner_config.memory_mb",
+                message="'memory_mb' must be between 64 and 65536",
+            ))
 
     return errors
 
