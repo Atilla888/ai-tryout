@@ -62,6 +62,8 @@ async def create_job_service(
     )
 
     db.add(job)
+    # flush (not commit) assigns job.id from the DB sequence so we can use it in
+    # the storage path below, while keeping everything in the same transaction.
     await db.flush()
 
     try:
@@ -83,6 +85,9 @@ async def create_job_service(
             input_artifacts[field_name] = str(artifact.id)
 
         if input_artifacts:
+            # Inject artifact UUIDs into the payload so the runner can look up
+            # each uploaded file via GET /internal/artifacts/{id}/content without
+            # needing to know the raw storage path.
             job.input_payload = {**input_payload, "input_artifacts": input_artifacts}
 
         await db.commit()

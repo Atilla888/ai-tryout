@@ -18,6 +18,8 @@ def resolve_storage_path(relative_path: str) -> Path:
     """Turn a stored relative path into an absolute one, and block path traversal."""
     root = storage_root()
     full = (root / relative_path).resolve()
+    # resolve() collapses '..' segments; the prefix check then rejects any path
+    # that escapes the storage root, preventing directory traversal attacks.
     if not str(full).startswith(str(root)):
         raise ValueError("Invalid storage path")
     return full

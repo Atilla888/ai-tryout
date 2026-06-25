@@ -8,8 +8,6 @@ from app.schemas.common import OrmBase
 
 
 class SpaceListItem(OrmBase):
-    """Short space info for cards and lists."""
-
     id: UUID = Field(validation_alias="public_id")
     public_id: UUID
     name: str
@@ -23,8 +21,6 @@ class SpaceListItem(OrmBase):
 
 
 class SpaceDetail(OrmBase):
-    """Full space including form and runner config."""
-
     id: UUID = Field(validation_alias="public_id")
     name: str
     slug: str
@@ -57,7 +53,6 @@ class SpaceCreate(BaseModel):
 
 
 class SpaceUpdate(BaseModel):
-    """Partial update — only send fields you want to change."""
     name: str | None = None
     description: str | None = None
     task_type: str | None = None
@@ -71,12 +66,10 @@ class SpaceUpdate(BaseModel):
 
 
 class AdminSpaceUpdate(SpaceUpdate):
-    """Admins can also reassign owner_id."""
     owner_id: int | None = None
 
 
 class SpaceRead(BaseModel):
-    """Space JSON after a create or update."""
     id: UUID = Field(validation_alias="public_id")
     created_at: datetime
     slug: str

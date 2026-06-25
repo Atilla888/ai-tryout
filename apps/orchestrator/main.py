@@ -22,7 +22,8 @@ import httpx
 
 from runner_backends import RunnerBackend, build_runner_backend
 
-# Statuses where it still makes sense to mark a job FAILED if its worker dies.
+# CANCELLING is excluded: _handle_cancellations() already terminates those workers
+# and calls _finalize_cancel(), so treating them as ACTIVE would race with that path.
 ACTIVE_STATUSES = frozenset({"STARTING", "RUNNING"})
 
 
@@ -187,6 +188,8 @@ class Orchestrator:
         if not queued:
             return
 
+        # One job per tick deliberately: avoids a burst of parallel spawns on
+        # startup and keeps the dispatch loop responsive to cancellations.
         job = queued[0]
         job_id = str(job["id"])
         if job_id in self.active:

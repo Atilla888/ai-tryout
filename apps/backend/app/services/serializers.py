@@ -27,7 +27,6 @@ def job_to_read(job: Job) -> JobRead:
 
 
 def job_to_submit_response(job: Job) -> JobSubmitResponse:
-    """What the client gets right after submitting a job."""
     return JobSubmitResponse(
         id=job.public_id,
         status=JobStatus(job.status),

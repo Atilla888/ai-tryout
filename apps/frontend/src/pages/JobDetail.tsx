@@ -22,7 +22,6 @@ function jobIsFinished(status: string) {
   )
 }
 
-/** Maps a job's current state to a user-facing status message. */
 function getMessage(job: Job) {
   if (job.status === 'QUEUED' && job.queue_position != null) {
     return `Position ${job.queue_position} in queue`

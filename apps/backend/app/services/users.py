@@ -6,7 +6,6 @@ from app.db.models import User
 
 
 async def list_users_service(db: AsyncSession) -> list[User]:
-    """Everyone who has logged in at least once, oldest first."""
     result = await db.execute(select(User).order_by(User.created_at))
     return list(result.scalars().all())
 

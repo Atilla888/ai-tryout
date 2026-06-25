@@ -10,17 +10,14 @@ import {
 } from '../api/api'
 import './AdminDashboard.css'
 
-/** Coloured pill for a space's publish status. */
 function StatusBadge({ status }: { status: string }) {
   return <span className={`adm-badge adm-status-${status.toLowerCase()}`}>{status}</span>
 }
 
-/** Coloured pill for a space's visibility (PUBLIC / PRIVATE). */
 function VisBadge({ visibility }: { visibility: string }) {
   return <span className={`adm-badge adm-vis-${visibility.toLowerCase()}`}>{visibility}</span>
 }
 
-/** Coloured pill for a user's role. */
 function RoleBadge({ role }: { role: string }) {
   return <span className={`adm-badge adm-role-${role.toLowerCase()}`}>{role}</span>
 }

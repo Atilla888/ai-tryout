@@ -45,7 +45,6 @@ async def run_cleanup_once() -> None:
 
 
 async def _cleanup_loop() -> None:
-    """Background loop: runs the expiration cleanup every hour."""
     while True:
         try:
             await run_cleanup_once()
@@ -56,8 +55,6 @@ async def _cleanup_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manages application startup and shutdown. Starts the background cleanup loop
-    on startup and cancels it cleanly when the server shuts down."""
     logging.basicConfig(level=logging.INFO)
     cleanup_task = asyncio.create_task(_cleanup_loop())
 
@@ -101,12 +98,10 @@ app.include_router(internal.router)
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])
 async def health():
-    """Simple liveness probe. Returns ok as long as the process is running."""
     return HealthResponse(status="ok")
 
 
 @app.get("/health-db", tags=["health"])
 async def health_db(db: db_dependency):
-    """Readiness probe that also checks database connectivity by running a trivial query."""
     await db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "active"}

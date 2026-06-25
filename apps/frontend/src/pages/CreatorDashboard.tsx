@@ -3,12 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { fetchMySpaces, type CreatorSpace } from '../api/api'
 import './CreatorDashboard.css'
 
-/** Coloured pill showing a space's publish status (DRAFT / PUBLISHED / DISABLED). */
 function StatusBadge({ status }: { status: string }) {
   return <span className={`creator-status-badge creator-status-${status.toLowerCase()}`}>{status}</span>
 }
 
-/** Lists all spaces owned by the current creator with edit and creation links. */
 function CreatorDashboard() {
   const [spaces, setSpaces] = useState<CreatorSpace[]>([])
   const [loading, setLoading] = useState(true)

@@ -7,13 +7,11 @@ from app.schemas.jobs import JobStatus
 
 
 class JobProgressUpdate(BaseModel):
-    """Runner reporting how far along it is."""
     progress_percent: int = Field(ge=0, le=100)
     message: str | None = None
 
 
 class JobFailUpdate(BaseModel):
-    """Runner explaining why the job failed."""
     error_code: str
     error_message: str
 
@@ -67,7 +65,6 @@ class JobExecutionData(BaseModel):
 
 
 class InternalArtifactRead(BaseModel):
-    """Artifact row right after an internal upload."""
     id: int
     artifact_type: str
     file_name: str

@@ -3,12 +3,10 @@ export const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 /** Module-level token store — updated by App.tsx whenever the OIDC session changes. */
 let accessToken: string | null = null
 
-/** Stores the current access token so it can be injected into API requests. */
 export function setAccessToken(token: string | null) {
   accessToken = token
 }
 
-/** Returns Authorization header if logged in, or an empty object for public endpoints. */
 export function authHeaders(): Record<string, string> {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
 }

@@ -21,7 +21,6 @@ function TokenSync() {
   return null
 }
 
-/** Wraps protected routes — redirects to the OIDC login page if not authenticated. */
 function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
   useEffect(() => {

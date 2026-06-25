@@ -8,7 +8,6 @@ _CONFIG_FILE = Path(__file__).resolve()
 
 
 def _find_repo_root(start: Path) -> Path:
-    """Walk up until we hit the folder with docker-compose.yml or .env."""
     for candidate in (start, *start.parents):
         if (candidate / "docker-compose.yml").is_file() or (candidate / ".env").is_file():
             return candidate

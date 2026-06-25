@@ -5,14 +5,12 @@ import type { Artifact, Job } from '../api/api'
 const RECENT_RUNS_LIMIT = 5
 const SECONDS_PER_QUEUE_POSITION = 15
 
-/** Converts a queue position to a rough human-readable time estimate. */
 function formatEta(queuePosition: number): string {
   const seconds = queuePosition * SECONDS_PER_QUEUE_POSITION
   if (seconds < 60) return `~${seconds}s`
   return `~${Math.round(seconds / 60)}m`
 }
 
-/** Returns a status line and progress value for the sidebar queue-status card. */
 function queueStatus(job: Job): { line: string; progress: number } {
   switch (job.status) {
     case 'QUEUED':
@@ -49,8 +47,6 @@ interface SpaceSidebarProps {
   onCopyShareLink: () => void
 }
 
-/** Right-hand sidebar of the space detail page: download/run-again actions,
- * live queue status, recent runs, and an "about" blurb. */
 function SpaceSidebar({
   isAuthenticated,
   recentJobs,

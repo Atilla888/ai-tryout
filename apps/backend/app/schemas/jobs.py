@@ -33,7 +33,6 @@ ACTIVE_JOB_STATUSES = frozenset({
 
 
 class JobSubmitResponse(BaseModel):
-    """Right after submit — enough for the UI to open the job page."""
     id: UUID
     status: JobStatus
     queue_position: int | None = None

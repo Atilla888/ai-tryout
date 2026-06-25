@@ -40,7 +40,9 @@ def _runner_env(job_id: str, execution_data: dict[str, Any], api_base_url: str, 
         "JOB_ID": str(job_id),
         "SPACE_ID": str(space_id) if space_id is not None else "",
         "BACKEND_API_URL": api_base_url,
-        "API_BASE_URL": api_base_url,  # alias kept for the existing runner contract
+        # Both names are injected so old runners (which read API_BASE_URL) and new
+        # runners (which read BACKEND_API_URL) both work without a coordinated rename.
+        "API_BASE_URL": api_base_url,
         "RUNNER_TOKEN": service_token,
         "INTERNAL_SERVICE_TOKEN": service_token,
         "INPUT_REFERENCE": str(input_reference),
@@ -150,6 +152,8 @@ class KubernetesRunnerBackend(RunnerBackend):
             image=runner_image,
             env=env_vars,
         )
+        # restart_policy="Never" ensures each pod runs exactly once. Combined with
+        # backoff_limit=0 this means K8s will not restart or retry the container.
         pod_spec = self._client.V1PodSpec(restart_policy="Never", containers=[container])
         template = self._client.V1PodTemplateSpec(
             metadata=self._client.V1ObjectMeta(labels={"app": "ai-spaces-runner", "job-id": str(job_id)}),
@@ -157,8 +161,13 @@ class KubernetesRunnerBackend(RunnerBackend):
         )
         job_spec = self._client.V1JobSpec(
             template=template,
+            # backoff_limit=0 disables K8s-level retries. The backend owns the
+            # failure/retry logic; if K8s retried, the backend could receive a
+            # second succeed/fail notification for the same job.
             backoff_limit=self.backoff_limit,
             active_deadline_seconds=self.active_deadline_seconds,
+            # Auto-delete finished Jobs after 1 h so the cluster doesn't accumulate
+            # stale Job objects. cleanup() handles early deletion on cancellation.
             ttl_seconds_after_finished=3600,
         )
         job = self._client.V1Job(

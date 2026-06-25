@@ -57,12 +57,10 @@ export interface Me {
   created_at: string
 }
 
-/** Returns the URL for inline preview of an artifact (image/audio/text). */
 export function artifactPreviewUrl(artifactId: string): string {
   return `${BASE_URL}/artifacts/${artifactId}/preview`
 }
 
-/** Returns the URL that triggers a file download (Content-Disposition: attachment). */
 export function artifactDownloadUrl(artifactId: string): string {
   return `${BASE_URL}/artifacts/${artifactId}/download`
 }
@@ -72,7 +70,6 @@ export async function submitJob(spaceId: string, payload: FormData): Promise<Job
   return apiRequest<JobSubmitResponse>(`/spaces/${spaceId}/jobs`, { method: 'POST', body: payload })
 }
 
-/** Fetches the current state of a job (status, progress, queue position). */
 export async function fetchJob(jobId: string): Promise<Job> {
   return apiRequest<Job>(`/jobs/${jobId}`)
 }
@@ -83,22 +80,18 @@ export async function cancelJob(jobId: string): Promise<Job> {
   return apiRequest<Job>(`/jobs/${jobId}/cancel`, { method: 'POST' })
 }
 
-/** Fetches the profile of the currently logged-in user. */
 export async function fetchMe(): Promise<Me> {
   return apiRequest<Me>('/me')
 }
 
-/** Fetches the job history for the currently logged-in user. */
 export async function fetchMyHistory(): Promise<Job[]> {
   return apiRequest<Job[]>('/me/history')
 }
 
-/** Fetches the output artifacts produced by a job. */
 export async function fetchJobArtifacts(jobId: string): Promise<Artifact[]> {
   return apiRequest<Artifact[]>(`/jobs/${jobId}/artifacts`)
 }
 
-/** Removes a finished job from the current user's history. */
 export async function deleteMyHistory(jobId: string): Promise<void> {
   await apiRequest<void>(`/me/history/${jobId}`, { method: 'DELETE' })
 }

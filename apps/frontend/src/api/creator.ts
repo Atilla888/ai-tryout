@@ -49,12 +49,10 @@ export interface ValidationResult {
   errors: FieldError[]
 }
 
-/** Fetches all spaces owned by the current creator. */
 export async function fetchMySpaces(): Promise<CreatorSpace[]> {
   return apiRequest<CreatorSpace[]>('/creator/spaces')
 }
 
-/** Creates a new space for the current creator. */
 export async function createCreatorSpace(data: SpacePayload): Promise<CreatorSpace> {
   return apiRequest<CreatorSpace>('/creator/spaces', {
     method: 'POST',
@@ -63,7 +61,6 @@ export async function createCreatorSpace(data: SpacePayload): Promise<CreatorSpa
   })
 }
 
-/** Partially updates an existing space (only provided fields are changed). */
 export async function updateCreatorSpace(id: string, data: Partial<SpacePayload>): Promise<CreatorSpace> {
   return apiRequest<CreatorSpace>(`/creator/spaces/${id}`, {
     method: 'PATCH',
@@ -72,7 +69,6 @@ export async function updateCreatorSpace(id: string, data: Partial<SpacePayload>
   })
 }
 
-/** Validates a space's config and returns any field-level errors without publishing it. */
 export async function validateCreatorSpace(id: string): Promise<ValidationResult> {
   return apiRequest<ValidationResult>(`/creator/spaces/${id}/validate`, { method: 'POST' })
 }

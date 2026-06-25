@@ -7,7 +7,6 @@ interface ArtifactViewerProps {
   artifact: Artifact
 }
 
-/** Formats an ISO expiration timestamp into a human-readable date/time string. */
 function formatExpirationDate(expiresAt: string | null): string {
   if (!expiresAt) return ''
   const date = new Date(expiresAt)
@@ -20,8 +19,6 @@ function formatExpirationDate(expiresAt: string | null): string {
   })
 }
 
-/** Renders an inline preview for image, audio, or text artifacts. Returns null
- * if the artifact type has no supported preview. */
 function renderPreview(artifact: Artifact) {
   const previewUrl = artifactPreviewUrl(artifact.id)
 

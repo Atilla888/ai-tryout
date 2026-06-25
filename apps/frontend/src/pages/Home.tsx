@@ -5,7 +5,6 @@ import './Home.css'
 
 const FILTERS = ['All', 'Audio', 'Video', '3D', 'Image', 'Text']
 
-/** Placeholder card shown while the space list is loading. */
 function SkeletonCard() {
   return (
     <div className="skeleton-card" aria-hidden="true">

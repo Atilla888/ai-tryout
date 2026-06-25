@@ -23,16 +23,11 @@ from app.services.storage import delete_job_storage, delete_storage_file
 
 @dataclass
 class CleanupResult:
-    """Summary of one cleanup pass, handy for logging and tests."""
     jobs_expired: int = 0
     artifacts_removed: int = 0
 
 
 async def cleanup_expired_jobs_and_artifacts(db: AsyncSession) -> CleanupResult:
-    """Mark expired jobs EXPIRED and delete their artifact files and rows.
-
-    Returns a :class:`CleanupResult` with the counts handled.
-    """
     now = datetime.now(timezone.utc)
     result = CleanupResult()
 
@@ -64,7 +59,8 @@ async def cleanup_expired_jobs_and_artifacts(db: AsyncSession) -> CleanupResult:
         result.jobs_expired += 1
 
     # 2. Safety net: any leftover artifact whose own expires_at has passed
-    #    (e.g. job not yet expired but artifact retention shorter).
+    #    (e.g. artifact deleted from a non-expired job, or a future policy where
+    #    artifact retention is shorter than job retention).
     orphan_artifacts = (
         await db.execute(
             select(Artifact).where(

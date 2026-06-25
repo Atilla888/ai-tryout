@@ -2,7 +2,6 @@ from app.schemas.jobs import JobStatus
 
 
 class JobTransitionError(ValueError):
-    """Someone tried to move a job to a status we do not allow."""
     pass
 
 
@@ -20,7 +19,6 @@ _ALLOWED: dict[JobStatus, set[JobStatus]] = {
 
 
 def ensure_transition(current: str, new: JobStatus) -> None:
-    """Raise JobTransitionError if this status change is not allowed."""
     try:
         current_status = JobStatus(current)
     except ValueError as exc:

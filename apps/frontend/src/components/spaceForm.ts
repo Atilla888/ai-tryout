@@ -6,7 +6,6 @@ export type FormErrors = Record<string, string>
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export const AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm']
 
-/** Client-side validation of the job submission form. Returns a map of field name → error message. */
 export function validateForm(inputs: InputFieldConfig[], values: FormValues): FormErrors {
   const errors: FormErrors = {}
   for (const field of inputs) {

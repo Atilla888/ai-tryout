@@ -9,7 +9,6 @@ interface DropZoneProps {
   onChange: (file: File | null) => void
 }
 
-/** Drag-and-drop file input that also opens a file picker on click. */
 function DropZone({ field, value, hasError, onChange }: DropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -51,7 +50,6 @@ interface SpaceInputFieldProps {
   onChange: (name: string, val: string | File | null) => void
 }
 
-/** Renders the appropriate input control for a single space input field definition. */
 function SpaceInputField({ config, value, error, onChange }: SpaceInputFieldProps) {
   const { name, type, label, description, required, placeholder, maxLength, min, max, options } = config
   const hasError = !!error

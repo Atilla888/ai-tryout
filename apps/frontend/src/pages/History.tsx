@@ -31,7 +31,6 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
-/** Job history page — shows the current user's past jobs sorted by date, with pagination and delete. */
 function History() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)

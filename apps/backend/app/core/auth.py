@@ -35,11 +35,10 @@ class NormalizedClaims:
 class AuthProvider(ABC):
     @abstractmethod
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
-        """Check the header and return claims, or raise 401."""
+        ...
 
 
 def _bearer_token(authorization: str | None) -> str:
-    """Pull the token out of a Bearer header."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,8 +49,6 @@ def _bearer_token(authorization: str | None) -> str:
 
 
 class OIDCAuthProvider(AuthProvider):
-    """Check access tokens from Keycloak using the realm public keys."""
-
     def __init__(self) -> None:
         # PyJWKClient caches keys and refreshes when Keycloak rotates them.
         self._jwks_client = jwt.PyJWKClient(settings.oidc_jwks_url)
@@ -119,7 +116,6 @@ auth_provider: AuthProvider = _build_provider()
 
 
 def map_realm_roles_to_role(realm_roles: list[str]) -> str:
-    """Keycloak can send many realm roles; we store one app role per user."""
     if "admin" in realm_roles:
         return "admin"
     if "space_creator" in realm_roles:
@@ -146,7 +142,6 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def require_role(*allowed_roles: str):
-    """Only let through users who have one of the given roles."""
 
     async def _checker(user: CurrentUser) -> User:
         if user.role not in allowed_roles:

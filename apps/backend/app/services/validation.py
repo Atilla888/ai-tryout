@@ -9,7 +9,6 @@ _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
-    """Make sure the form definition in ui_config.inputs is usable."""
     errors: list[FieldError] = []
 
     inputs = ui_config.get("inputs")
@@ -64,7 +63,6 @@ def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
 
 
 def _validate_runner_config(runner_config: dict[str, Any], container_image: str) -> list[FieldError]:
-    """Sanity-check runner limits and that a container image is set."""
     errors: list[FieldError] = []
 
     if not container_image or not container_image.strip():
@@ -92,7 +90,6 @@ def _validate_runner_config(runner_config: dict[str, Any], container_image: str)
 
 
 def validate_space_config(space: Space) -> ValidationResult:
-    """Run before a creator publishes a space."""
     errors: list[FieldError] = []
     errors.extend(_validate_ui_config(space.ui_config or {}))
     errors.extend(_validate_runner_config(space.runner_config or {}, space.container_image or ""))

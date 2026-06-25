@@ -6,7 +6,6 @@ from app.core.config import settings
 async def verify_internal_service_token(
     x_service_token: str | None = Header(default=None, alias="X-Service-Token"),
 ) -> None:
-    """Orchestrator and runners must send the shared internal token."""
     if not settings.internal_service_token:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
