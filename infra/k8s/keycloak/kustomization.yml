@@ -1,0 +1,12 @@
+namespace: ai-spaces
+
+resources:
+  - keycloak.yml
+
+configMapGenerator:
+  - name: keycloak-realm
+    files:
+      - ai-spaces-realm.json
+
+generatorOptions:
+  disableNameSuffixHash: true

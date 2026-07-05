@@ -1,0 +1,97 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: backend-config
+  namespace: ai-spaces
+data:
+  AUTH_PROVIDER: "oidc"
+  ARTIFACT_STORAGE_ROOT: "/app/storage"
+
+  OIDC_ISSUER: "http://localhost:8080/realms/ai-spaces"
+  OIDC_JWKS_URL: "http://keycloak:8080/realms/ai-spaces/protocol/openid-connect/certs"
+  OIDC_AUDIENCE: "ai-spaces-frontend"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: backend
+  namespace: ai-spaces
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: backend
+  namespace: ai-spaces
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      initContainers:
+        - name: migrate-db
+          image: ai-spaces-backend:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - alembic
+          args:
+            - upgrade
+            - head
+          envFrom:
+            - secretRef:
+                name: backend-secret
+            - configMapRef:
+                name: backend-config
+
+      containers:
+        - name: backend
+          image: ai-spaces-backend:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: backend-secret
+            - configMapRef:
+                name: backend-config
+          
+          readinessProbe:
+            httpGet:
+              path: /health-db
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 10
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          volumeMounts:
+            - name: artifacts-storage
+              mountPath: /app/storage
+      volumes:
+        - name: artifacts-storage
+          persistentVolumeClaim:
+            claimName: ai-spaces-artifacts-pvc

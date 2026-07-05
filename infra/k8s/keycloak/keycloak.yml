@@ -1,0 +1,106 @@
+# The keycloak-secret Secret lives in ../secrets/keycloak-secret.yml (gitignored).
+# Apply it before this manifest: kubectl apply -f infra/k8s/secrets/keycloak-secret.yml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak-data-pvc
+  namespace: ai-spaces
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ai-spaces
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: ai-spaces
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: keycloak
+
+  template:
+    metadata:
+      labels:
+        app: keycloak
+
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
+        
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.6.3
+          imagePullPolicy: IfNotPresent
+
+          args:
+            - start-dev
+            - --import-realm
+            - --hostname=http://localhost:8080
+
+          envFrom:
+            - secretRef:
+                name: keycloak-secret
+
+          env:
+            - name: JAVA_OPTS_APPEND
+              value: "-XX:ActiveProcessorCount=1"
+
+          ports:
+            - containerPort: 8080
+
+          volumeMounts:
+            - name: keycloak-data
+              mountPath: /opt/keycloak/data
+
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+
+          readinessProbe:
+            httpGet:
+              path: /realms/ai-spaces
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 20
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+
+      volumes:
+        - name: keycloak-data
+          persistentVolumeClaim:
+            claimName: keycloak-data-pvc
+
+        - name: realm-import
+          configMap:
+            name: keycloak-realm

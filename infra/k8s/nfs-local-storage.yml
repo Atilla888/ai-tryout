@@ -1,0 +1,34 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: ai-spaces-artifacts-pv
+spec: 
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+
+  nfs:
+    server: ai-spaces-nfs
+    path: /
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ai-spaces-artifacts-pvc
+  namespace: ai-spaces
+spec:
+  accessModes:
+    - ReadWriteMany
+
+  storageClassName: ""
+
+  resources:
+    requests:
+      storage: 5Gi
+
+  volumeName: ai-spaces-artifacts-pv
