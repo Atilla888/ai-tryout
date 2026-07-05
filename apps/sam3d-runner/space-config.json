@@ -1,0 +1,37 @@
+{
+  "slug": "sam-3d-objects",
+  "name": "3D Generator – SAM 3D Objects",
+  "description": "Upload a photo and get a 3D model back. Powered by Meta's SAM 3D Objects — the model segments the object in your image and reconstructs it as a downloadable .glb file you can open in any 3D viewer.",
+  "task_type": "image-to-3d",
+  "input_types": ["image"],
+  "output_types": ["3d"],
+  "container_image": "ai-spaces-sam3d:latest",
+  "visibility": "PUBLIC",
+  "status": "PUBLISHED",
+  "runner_config": {
+    "version": 1,
+    "resource_profile": "gpu-medium",
+    "timeout_seconds": 600
+  },
+  "ui_config": {
+    "version": 1,
+    "inputs": [
+      {
+        "name": "image",
+        "type": "file",
+        "label": "Input Image",
+        "required": true,
+        "placeholder": "Upload a photo of an object…",
+        "mime_types": ["image/png", "image/jpeg", "image/webp"],
+        "max_size_mb": 20
+      }
+    ],
+    "outputs": [
+      {
+        "name": "model",
+        "type": "3d",
+        "label": "3D Model (.glb)"
+      }
+    ]
+  }
+}

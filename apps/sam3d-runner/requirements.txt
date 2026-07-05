@@ -1,0 +1,2 @@
+# Platform SDK dependency only — model deps are installed separately in the Dockerfile
+httpx>=0.27
