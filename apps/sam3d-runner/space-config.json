@@ -18,7 +18,7 @@
     "inputs": [
       {
         "name": "image",
-        "type": "file",
+        "type": "image_upload",
         "label": "Input Image",
         "required": true,
         "placeholder": "Upload a photo of an object…",
