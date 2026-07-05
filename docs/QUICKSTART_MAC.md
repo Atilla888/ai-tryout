@@ -30,13 +30,24 @@ Terminal **3** nur starten, wenn Jobs wirklich ausgeführt werden sollen.
 
 ## Die Befehle
 
-### Terminal 1 — Datenbank
+### Terminal 1 — Datenbank + Keycloak (Login)
 
 Vom Projektordner (`ai-spaces/`) aus:
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres keycloak
 ```
+
+Keycloak braucht beim ersten Start ~30 Sekunden. Es ist bereit wenn
+`http://localhost:8080/realms/ai-spaces` erreichbar ist.
+
+**Test-Login für lokale Entwicklung:**
+
+| Benutzername | Passwort | Rolle |
+|---|---|---|
+| `admin` | `admin123` | admin |
+
+> Diese Zugangsdaten werden beim ersten Start automatisch angelegt (siehe Einmalige Einrichtung).
 
 Der Befehl kehrt sofort zurück (Docker läuft im Hintergrund).
 Den Tab kannst du danach weiterverwenden.
@@ -165,7 +176,35 @@ AUTH_PROVIDER=dev
 EOF
 ```
 
-### 4. Datenbank-Migrationen einspielen
+### 4. Keycloak-Testnutzer anlegen (einmalig)
+
+Keycloak muss laufen. Dann im Terminal:
+
+```bash
+# Admin-Token holen
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
+  -d "client_id=admin-cli&grant_type=password&username=admin&password=admin" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+
+# Nutzer anlegen
+curl -s -X POST http://localhost:8080/admin/realms/ai-spaces/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","email":"admin@test.com","firstName":"Admin","lastName":"User","enabled":true,"emailVerified":true,"credentials":[{"type":"password","value":"admin123","temporary":false}]}'
+
+# User-ID holen und Admin-Rolle zuweisen
+USER_ID=$(curl -s "http://localhost:8080/admin/realms/ai-spaces/users?username=admin" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
+ROLE=$(curl -s http://localhost:8080/admin/realms/ai-spaces/roles/admin \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+curl -s -X POST "http://localhost:8080/admin/realms/ai-spaces/users/$USER_ID/role-mappings/realm" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d "[$ROLE]"
+```
+
+Login im Browser: **Benutzername** `admin`, **Passwort** `admin123`
+
+### 5. Datenbank-Migrationen einspielen
 
 Postgres muss laufen (`docker compose up -d postgres`), dann:
 
