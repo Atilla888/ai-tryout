@@ -1,508 +1,508 @@
-# Testergebnisse – AI-Spaces
+# Test Results – AI-Spaces
 
-Projekt: AI-Spaces · Interdisziplinäres SW-Entwicklungsprojekt · Hochschule Hof · SS 2026
-Stand: 2026-07-05
-Schema: Foliensatz 08 (Was wird getestet / Voraussetzungen / Vorgehen / Erwartetes Ergebnis / Testergebnis)
+Project: AI-Spaces · Interdisciplinary Software Engineering Project · Hof University of Applied Sciences · SS 2026
+Date: 2026-07-05
+Schema: Slide set 08 (What is tested / Prerequisites / Steps / Expected result / Test result)
 
 ---
 
-## Übersicht
+## Overview
 
-| Testkategorie | Werkzeug | Anzahl Tests | Ergebnis |
+| Test category | Tool | Number of tests | Result |
 |---|---|---|---|
-| Backend Unit-Tests | pytest 8.x | 228 passed, 7 skipped | 80 % Branch-Coverage |
-| Frontend Unit-/UI-Tests | Vitest + @testing-library/react | 24 passed | alle grün |
-| Last-Test | scripts/loadtest.py (httpx ASGI) | 2 x 2.000 Requests | 0 Fehler |
-| Manuelle Tests | Manuelles Durchklicken | 15 Testfälle (TF-01 bis TF-15) | alle ok |
+| Backend unit tests | pytest 8.x | 228 passed, 7 skipped | 80% branch coverage |
+| Frontend unit/UI tests | Vitest + @testing-library/react | 24 passed | all green |
+| Load test | scripts/loadtest.py (httpx ASGI) | 2 x 2,000 requests | 0 errors |
+| Manual tests | Manual walkthrough | 15 test cases (TF-01 to TF-15) | all ok |
 
 ---
 
-## 1  Backend Unit-Tests (pytest)
+## 1  Backend Unit Tests (pytest)
 
-Werkzeug: pytest 8.x + pytest-asyncio + pytest-cov
-Datenbank: SQLite In-Memory (JSONB → JSON Shim), kein laufender Server nötig
-Auth: DevAuthProvider (kein Keycloak nötig), Rollen werden per app.dependency_overrides überschrieben
+Tool: pytest 8.x + pytest-asyncio + pytest-cov
+Database: SQLite in-memory (JSONB -> JSON shim), no running server required
+Auth: DevAuthProvider (no Keycloak required), roles are overridden via app.dependency_overrides
 
-Ausführung:
+Run:
 ```
 cd apps/backend
 python -m pytest tests/ --cov=app --cov-branch -q
 ```
 
-Ergebnis:
+Result:
 ```
-228 passed, 7 skipped  (4,02 s)
-Branch-Coverage gesamt: 80 %  (Statement-Miss 204/1193, Branch-Miss 20/182)
+228 passed, 7 skipped  (4.02 s)
+Branch coverage total: 80%  (statements missed 204/1193, branches missed 20/182)
 ```
 
-### Testmodule und Testfälle
+### Test modules and test cases
 
-#### 1.1  tests/test_validation.py – 30 Tests
+#### 1.1  tests/test_validation.py – 30 tests
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | Gültige Minimalconfig | Space-Objekt mit einem text-Input und Container-Image | validate_space_config() aufrufen | valid=True, errors=[] | ok |
-| 2 | Fehlender inputs-Key | ui_config ohne inputs | Validation | Fehler: 'inputs' key is required | ok |
-| 3 | inputs kein Array | inputs: "string" | Validation | Fehler: 'inputs' must be a list | ok |
-| 4 | Leeres inputs-Array | inputs: [] | Validation | Fehler: At least one input is required | ok |
-| 5 | Ungültiger Feldname (1abc) | Input mit Name 1abc | Validation | Fehler: Name muss mit Buchstabe/Underscore beginnen | ok |
-| 6 | Doppelter Feldname | Zwei Inputs mit gleichem Name | Validation | Fehler: Duplicate input name | ok |
-| 7 | Unbekannter Typ | type: "unknown" | Validation | Fehler: type must be one of … | ok |
-| 8 | select ohne options | type: "select" ohne options | Validation | Fehler: options is required | ok |
-| 9 | select mit leerem options-Array | options: [] | Validation | Fehler: options must be non-empty | ok |
-| 10 | select mit ungültigem Eintrag | options: [""] | Validation | Fehler: entries must be non-empty strings | ok |
-| 11 | Fehlendes label | Input ohne label | Validation | Fehler: label is required | ok |
-| 12 | required kein Boolean | required: "yes" | Validation | Fehler: required must be a boolean | ok |
-| 13 | Fehlendes Container-Image | container_image: "" | Validation | Fehler: container_image must not be empty | ok |
-| 14 | timeout_seconds kein Integer | timeout_seconds: "300" | Validation | Fehler: must be an integer | ok |
-| 15 | timeout_seconds außerhalb Bereich | timeout_seconds: 0 | Validation | Fehler: must be between 1 and 86400 | ok |
-| 16 | memory_mb kein Integer | memory_mb: "512" | Validation | Fehler: must be an integer | ok |
-| 17 | memory_mb außerhalb Bereich | memory_mb: 63 | Validation | Fehler: must be between 64 and 65536 | ok |
-| 18–30 | Weitere Grenzfälle | Korrekte Typen text, image_upload, audio_upload, number, select | Validation | Jeweils valid=True oder gezielte Fehlermeldung | ok |
+| 1 | Valid minimal config | Space object with one text input and container image | Call validate_space_config() | valid=True, errors=[] | ok |
+| 2 | Missing inputs key | ui_config without inputs | Validation | Error: 'inputs' key is required | ok |
+| 3 | inputs not a list | inputs: "string" | Validation | Error: 'inputs' must be a list | ok |
+| 4 | Empty inputs array | inputs: [] | Validation | Error: At least one input is required | ok |
+| 5 | Invalid field name (1abc) | Input with name 1abc | Validation | Error: name must start with a letter or underscore | ok |
+| 6 | Duplicate field name | Two inputs with the same name | Validation | Error: Duplicate input name | ok |
+| 7 | Unknown type | type: "unknown" | Validation | Error: type must be one of … | ok |
+| 8 | select without options | type: "select" without options | Validation | Error: options is required | ok |
+| 9 | select with empty options array | options: [] | Validation | Error: options must be non-empty | ok |
+| 10 | select with invalid entry | options: [""] | Validation | Error: entries must be non-empty strings | ok |
+| 11 | Missing label | Input without label | Validation | Error: label is required | ok |
+| 12 | required not a boolean | required: "yes" | Validation | Error: required must be a boolean | ok |
+| 13 | Missing container image | container_image: "" | Validation | Error: container_image must not be empty | ok |
+| 14 | timeout_seconds not an integer | timeout_seconds: "300" | Validation | Error: must be an integer | ok |
+| 15 | timeout_seconds out of range | timeout_seconds: 0 | Validation | Error: must be between 1 and 86400 | ok |
+| 16 | memory_mb not an integer | memory_mb: "512" | Validation | Error: must be an integer | ok |
+| 17 | memory_mb out of range | memory_mb: 63 | Validation | Error: must be between 64 and 65536 | ok |
+| 18–30 | Further edge cases | Valid types text, image_upload, audio_upload, number, select | Validation | valid=True or targeted error message | ok |
 
 ---
 
-#### 1.2  tests/test_spaces_api.py – 8 Tests
+#### 1.2  tests/test_spaces_api.py – 8 tests
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | GET /spaces – leer | Keine Spaces in DB | GET /spaces | [] | ok |
-| 2 | GET /spaces – nur veröffentlichte, öffentliche | Mix aus Draft/Published und Public/Private | GET /spaces | Nur PUBLISHED + PUBLIC erscheinen | ok |
-| 3 | GET /spaces – mehrere Spaces | 3 veröffentlichte Spaces | GET /spaces | Alle 3 im Response | ok |
-| 4 | GET /spaces/{id} – 200 | Space vorhanden | GET /spaces/{id} | HTTP 200, korrekte Daten | ok |
-| 5 | GET /spaces/{id} – 404 | Unbekannte ID | GET /spaces/{id} | HTTP 404 | ok |
-| 6 | GET /spaces/{id} – privater Space direkt abrufbar | PRIVATE Space | GET /spaces/{id} | HTTP 200 (ID-Lookup ignoriert Sichtbarkeit) | ok |
-| 7 | POST /spaces – 201 | Gültiger Payload | POST /spaces | HTTP 201, Space in DB | ok |
-| 8 | POST /spaces – 409 Duplikat | Space mit gleichem Slug | POST /spaces | HTTP 409 Conflict | ok |
+| 1 | GET /spaces – empty | No spaces in DB | GET /spaces | [] | ok |
+| 2 | GET /spaces – only published public | Mix of draft/published and public/private | GET /spaces | Only PUBLISHED + PUBLIC appear | ok |
+| 3 | GET /spaces – multiple spaces | 3 published spaces | GET /spaces | All 3 in response | ok |
+| 4 | GET /spaces/{id} – 200 | Space exists | GET /spaces/{id} | HTTP 200, correct data | ok |
+| 5 | GET /spaces/{id} – 404 | Unknown ID | GET /spaces/{id} | HTTP 404 | ok |
+| 6 | GET /spaces/{id} – private space accessible by ID | PRIVATE space | GET /spaces/{id} | HTTP 200 (ID lookup ignores visibility) | ok |
+| 7 | POST /spaces – 201 | Valid payload | POST /spaces | HTTP 201, space in DB | ok |
+| 8 | POST /spaces – 409 duplicate | Space with same slug | POST /spaces | HTTP 409 Conflict | ok |
 
 ---
 
-#### 1.3  tests/test_creator_api.py – 13 Tests
+#### 1.3  tests/test_creator_api.py – 13 tests
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | POST /creator/spaces – Erstellen | Eingeloggt als creator | POST /creator/spaces | HTTP 201 | ok |
-| 2 | POST /creator/spaces – Duplikat | Space mit gleichem Slug existiert | POST /creator/spaces | HTTP 409 | ok |
-| 3 | GET /creator/spaces – leer | Keine eigenen Spaces | GET /creator/spaces | [] | ok |
-| 4 | GET /creator/spaces – eigene Spaces | 2 eigene Spaces | GET /creator/spaces | Beide im Response | ok |
-| 5 | PATCH /creator/spaces/{id} – 200 | Eigener Space | PATCH mit neuem Namen | HTTP 200, Name aktualisiert | ok |
-| 6 | PATCH /creator/spaces/{id} – 404 | Unbekannte ID | PATCH | HTTP 404 | ok |
-| 7 | PATCH /creator/spaces/{id} – 403 | Fremder Space | PATCH als anderer User | HTTP 403 | ok |
-| 8 | POST /creator/spaces/{id}/validate – gültig | Gültige Config | Validate | HTTP 200, valid: true | ok |
-| 9 | POST /creator/spaces/{id}/validate – ungültig | Fehlerhafte Config | Validate | HTTP 200, Fehlerliste | ok |
-| 10 | POST /creator/spaces/{id}/validate – 404 | Unbekannte ID | Validate | HTTP 404 | ok |
-| 11 | POST /creator/spaces/{id}/validate – 403 | Fremder Space | Validate als anderer User | HTTP 403 | ok |
-| 12 | POST /creator/spaces – end_user geblockt | User hat Rolle end_user | POST /creator/spaces | HTTP 403 | ok |
-| 13 | GET /creator/spaces – end_user geblockt | User hat Rolle end_user | GET /creator/spaces | HTTP 403 | ok |
+| 1 | POST /creator/spaces – create | Logged in as creator | POST /creator/spaces | HTTP 201 | ok |
+| 2 | POST /creator/spaces – duplicate | Space with same slug exists | POST /creator/spaces | HTTP 409 | ok |
+| 3 | GET /creator/spaces – empty | No own spaces | GET /creator/spaces | [] | ok |
+| 4 | GET /creator/spaces – own spaces | 2 own spaces | GET /creator/spaces | Both in response | ok |
+| 5 | PATCH /creator/spaces/{id} – 200 | Own space | PATCH with new name | HTTP 200, name updated | ok |
+| 6 | PATCH /creator/spaces/{id} – 404 | Unknown ID | PATCH | HTTP 404 | ok |
+| 7 | PATCH /creator/spaces/{id} – 403 | Foreign space | PATCH as different user | HTTP 403 | ok |
+| 8 | POST /creator/spaces/{id}/validate – valid | Valid config | Validate | HTTP 200, valid: true | ok |
+| 9 | POST /creator/spaces/{id}/validate – invalid | Faulty config | Validate | HTTP 200, error list | ok |
+| 10 | POST /creator/spaces/{id}/validate – 404 | Unknown ID | Validate | HTTP 404 | ok |
+| 11 | POST /creator/spaces/{id}/validate – 403 | Foreign space | Validate as different user | HTTP 403 | ok |
+| 12 | POST /creator/spaces – end_user blocked | User has role end_user | POST /creator/spaces | HTTP 403 | ok |
+| 13 | GET /creator/spaces – end_user blocked | User has role end_user | GET /creator/spaces | HTTP 403 | ok |
 
 ---
 
-#### 1.4  tests/test_admin_api.py – 13 Tests
+#### 1.4  tests/test_admin_api.py – 13 tests
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | GET /admin/spaces – leer | Keine Spaces | GET /admin/spaces | [] | ok |
-| 2 | GET /admin/spaces – alle Spaces | Mix verschiedener Spaces | GET /admin/spaces | Alle sichtbar (inkl. Private) | ok |
-| 3 | PATCH /admin/spaces/{id} – Status ändern | Space vorhanden | PATCH mit neuem Status | HTTP 200 | ok |
-| 4 | PATCH /admin/spaces/{id} – Visibility ändern | Space vorhanden | PATCH mit neuer Visibility | HTTP 200 | ok |
-| 5 | PATCH /admin/spaces/{id} – 404 | Unbekannte ID | PATCH | HTTP 404 | ok |
-| 6 | PATCH /admin/spaces/{id} – 403 non-admin | User ist kein Admin | PATCH | HTTP 403 | ok |
-| 7 | DELETE /admin/spaces/{id} – 204 | Space vorhanden | DELETE | HTTP 204 | ok |
-| 8 | DELETE /admin/spaces/{id} – 404 | Unbekannte ID | DELETE | HTTP 404 | ok |
-| 9 | DELETE /admin/spaces/{id} – 403 non-admin | User ist kein Admin | DELETE | HTTP 403 | ok |
-| 10 | GET /admin/users – leer | Keine User in DB | GET /admin/users | [] | ok |
-| 11 | GET /admin/users – enthält Seeded-User | User in DB | GET /admin/users | User im Response | ok |
-| 12 | GET /admin/users – 403 non-admin | User ist kein Admin | GET /admin/users | HTTP 403 | ok |
-| 13 | Admin sieht alle Spaces inkl. fremder | Spaces verschiedener Owner | GET /admin/spaces | Alle gelistet | ok |
+| 1 | GET /admin/spaces – empty | No spaces | GET /admin/spaces | [] | ok |
+| 2 | GET /admin/spaces – all spaces | Mix of different spaces | GET /admin/spaces | All visible (including private) | ok |
+| 3 | PATCH /admin/spaces/{id} – change status | Space exists | PATCH with new status | HTTP 200 | ok |
+| 4 | PATCH /admin/spaces/{id} – change visibility | Space exists | PATCH with new visibility | HTTP 200 | ok |
+| 5 | PATCH /admin/spaces/{id} – 404 | Unknown ID | PATCH | HTTP 404 | ok |
+| 6 | PATCH /admin/spaces/{id} – 403 non-admin | User is not admin | PATCH | HTTP 403 | ok |
+| 7 | DELETE /admin/spaces/{id} – 204 | Space exists | DELETE | HTTP 204 | ok |
+| 8 | DELETE /admin/spaces/{id} – 404 | Unknown ID | DELETE | HTTP 404 | ok |
+| 9 | DELETE /admin/spaces/{id} – 403 non-admin | User is not admin | DELETE | HTTP 403 | ok |
+| 10 | GET /admin/users – empty | No users in DB | GET /admin/users | [] | ok |
+| 11 | GET /admin/users – contains seeded user | User in DB | GET /admin/users | User in response | ok |
+| 12 | GET /admin/users – 403 non-admin | User is not admin | GET /admin/users | HTTP 403 | ok |
+| 13 | Admin sees all spaces including foreign ones | Spaces from different owners | GET /admin/spaces | All listed | ok |
 
 ---
 
-#### 1.5  tests/test_users_service.py – 8 Tests
+#### 1.5  tests/test_users_service.py – 8 tests
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | list_users() – leer | Keine User | list_users() | [] | ok |
-| 2 | list_users() – alle | 2 User in DB | list_users() | Beide zurückgegeben | ok |
-| 3 | get_by_subject() – gefunden | User in DB | get_by_subject(subject, idp) | User-Objekt | ok |
-| 4 | get_by_subject() – nicht gefunden | Kein passender User | get_by_subject() | None | ok |
-| 5 | get_by_subject() – falscher IDP | User mit anderem IDP | get_by_subject() | None | ok |
-| 6 | get_or_create() – neuer User | User existiert nicht | get_or_create() | Neues User-Objekt | ok |
-| 7 | get_or_create() – existierender User | User bereits in DB | get_or_create() | Bestehenden User zurückgegeben | ok |
-| 8 | get_or_create() – Race Condition | IntegrityError beim Insert (Mock) | get_or_create() | Fallback auf SELECT, kein Fehler | ok |
+| 1 | list_users() – empty | No users | list_users() | [] | ok |
+| 2 | list_users() – all | 2 users in DB | list_users() | Both returned | ok |
+| 3 | get_by_subject() – found | User in DB | get_by_subject(subject, idp) | User object | ok |
+| 4 | get_by_subject() – not found | No matching user | get_by_subject() | None | ok |
+| 5 | get_by_subject() – wrong IDP | User with different IDP | get_by_subject() | None | ok |
+| 6 | get_or_create() – new user | User does not exist | get_or_create() | New user object | ok |
+| 7 | get_or_create() – existing user | User already in DB | get_or_create() | Existing user returned | ok |
+| 8 | get_or_create() – race condition | IntegrityError on insert (mock) | get_or_create() | Fallback to SELECT, no error | ok |
 
 ---
 
-#### 1.6  Weitere Testmodule
+#### 1.6  Further test modules
 
-| Modul | Tests | Inhalt |
+| Module | Tests | Content |
 |---|---|---|
-| tests/test_jobs_api.py | 13 | Job-CRUD: Erstellen, Status-Übergänge, Cancel, interne Endpunkte |
-| tests/test_job_state_transitions.py | 36 | Zustandsmaschine: alle erlaubten/verbotenen Statusübergänge |
-| tests/test_job_transitions.py | 13 | Orchestrator-Übergänge (STARTING→RUNNING→SUCCEEDED/FAILED) |
-| tests/test_history.py | 9 | /me/history – Liste, Delete 204, 403 für fremde Jobs, 404 |
-| tests/test_artifacts.py | 5 | Artefakt-Upload, -Download, Content-Type-Handling |
-| tests/test_auth.py | 12 | DevAuthProvider, OIDC-Token-Parsing, Rollen-Extraktion |
-| tests/test_fake_runner.py | 2 | Fake-Runner SDK-Roundtrip (DEV_MODE) |
-| tests/test_maintenance.py | 4 | Cleanup-Job: veraltete Jobs abschließen |
-| tests/integration/test_job_flow.py | 16 | End-to-End: Job anlegen → Runner → Artefakt → succeed |
+| tests/test_jobs_api.py | 13 | Job CRUD: create, status transitions, cancel, internal endpoints |
+| tests/test_job_state_transitions.py | 36 | State machine: all allowed and forbidden status transitions |
+| tests/test_job_transitions.py | 13 | Orchestrator transitions (STARTING -> RUNNING -> SUCCEEDED/FAILED) |
+| tests/test_history.py | 9 | /me/history – list, delete 204, 403 for foreign jobs, 404 |
+| tests/test_artifacts.py | 5 | Artifact upload, download, content-type handling |
+| tests/test_auth.py | 12 | DevAuthProvider, OIDC token parsing, role extraction |
+| tests/test_fake_runner.py | 2 | Fake runner SDK roundtrip (DEV_MODE) |
+| tests/test_maintenance.py | 4 | Cleanup job: closing stale jobs |
+| tests/integration/test_job_flow.py | 16 | End-to-end: create job -> runner -> artifact -> succeed |
 
 ---
 
-## 2  Frontend Unit-/UI-Tests (Vitest)
+## 2  Frontend Unit/UI Tests (Vitest)
 
-Werkzeug: Vitest + @testing-library/react + jsdom
-Mocks: API-Module gemockt via vi.mock('../api/api'), OIDC via vi.mock('react-oidc-context')
+Tool: Vitest + @testing-library/react + jsdom
+Mocks: API modules mocked via vi.mock('../api/api'), OIDC via vi.mock('react-oidc-context')
 
-Ausführung:
+Run:
 ```
 cd apps/frontend
 npm run test
 ```
 
-Ergebnis:
+Result:
 ```
 Test Files  5 passed (5)
 Tests       24 passed (24)
-Duration    6,36 s
+Duration    6.36 s
 ```
 
-### Testsuiten und Testfälle
+### Test suites and test cases
 
-#### 2.1  History.test.tsx – 9 Tests (Seite: /history)
+#### 2.1  History.test.tsx – 9 tests (page: /history)
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | Ladezustand → Jobs gerendert | fetchMyHistory gibt Jobs zurück | Seite mounten | Zuerst Spinner, dann Job-Liste | ok |
-| 2 | Plural-Label bei mehreren Jobs | 2 Jobs im Mock | Seite mounten | "2 jobs in your history" | ok |
-| 3 | Fehlermeldung bei API-Fehler | fetchMyHistory wirft Fehler | Seite mounten | Fehlermeldung sichtbar | ok |
-| 4 | Empty State | fetchMyHistory gibt [] zurück | Seite mounten | "No jobs in your history yet" | ok |
-| 5 | Status-Pill für fehlgeschlagenen Job | Job mit status: FAILED | Seite mounten | Rote Status-Pill | ok |
-| 6 | Sortierung: neueste zuerst | 2 Jobs mit verschiedenen Zeitstempeln | Seite mounten | Neuerer Job oben | ok |
-| 7 | Delete bestätigt → Job verschwindet | Confirm-Dialog akzeptiert | Delete-Button klicken | Job nicht mehr sichtbar | ok |
-| 8 | Delete abgebrochen → Job bleibt | Confirm-Dialog abgelehnt | Delete-Button klicken, Cancel | Job bleibt sichtbar | ok |
-| 9 | Delete fehlgeschlagen → Alert | deleteMyHistory wirft Fehler | Delete-Button klicken | Fehlermeldung erscheint | ok |
+| 1 | Loading state -> jobs rendered | fetchMyHistory returns jobs | Mount page | Spinner first, then job list | ok |
+| 2 | Plural label for multiple jobs | 2 jobs in mock | Mount page | "2 jobs in your history" | ok |
+| 3 | Error message on API error | fetchMyHistory throws error | Mount page | Error message visible | ok |
+| 4 | Empty state | fetchMyHistory returns [] | Mount page | "No jobs in your history yet" | ok |
+| 5 | Status pill for failed job | Job with status: FAILED | Mount page | Red status pill | ok |
+| 6 | Sort order: newest first | 2 jobs with different timestamps | Mount page | Newer job on top | ok |
+| 7 | Delete confirmed -> job disappears | Confirm dialog accepted | Click delete button | Job no longer visible | ok |
+| 8 | Delete cancelled -> job stays | Confirm dialog rejected | Click delete button, cancel | Job still visible | ok |
+| 9 | Delete failed -> alert | deleteMyHistory throws error | Click delete button | Error message appears | ok |
 
 ---
 
-#### 2.2  Spaces.test.tsx – 5 Tests (Seite: /spaces, Submit-Fluss)
+#### 2.2  Spaces.test.tsx – 5 tests (page: /spaces, submit flow)
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | Ladezustand → Space-Liste | fetchSpaces gibt 2 Spaces zurück | Seite mounten | Spinner dann Karten | ok |
-| 2 | Suche nach Space-Name | 2 Spaces, Suchbegriff eingeben | Suchfeld befüllen | Nur passende Spaces gezeigt | ok |
-| 3 | Filter nach Task-Type | Spaces mit verschiedenen Task-Types | Task-Type-Chip klicken | Nur Spaces mit diesem Typ | ok |
-| 4 | Fehlerzustand | fetchSpaces wirft Fehler | Seite mounten | Fehlermeldung sichtbar | ok |
-| 5 | Formular abschicken → JobDetail | Eingabe befüllt, Submit | Submit-Button klicken | Navigation zu /jobs/{id} | ok |
+| 1 | Loading state -> space list | fetchSpaces returns 2 spaces | Mount page | Spinner then cards | ok |
+| 2 | Search by space name | 2 spaces, enter search term | Fill search field | Only matching spaces shown | ok |
+| 3 | Filter by task type | Spaces with different task types | Click task type chip | Only spaces with that type | ok |
+| 4 | Error state | fetchSpaces throws error | Mount page | Error message visible | ok |
+| 5 | Submit form -> JobDetail | Input filled, submit | Click submit button | Navigation to /jobs/{id} | ok |
 
 ---
 
-#### 2.3  SpaceEditor.test.tsx – 4 Tests (Seite: /creator/spaces)
+#### 2.3  SpaceEditor.test.tsx – 4 tests (page: /creator/spaces)
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | Slug aus Name auto-generiert | Neues Space-Formular | Name eingeben | Slug wird automatisch befüllt | ok |
-| 2 | "Save as Draft" sendet korrekten Payload | Formular befüllt | Save-Button klicken | createSpace() mit erwarteten Daten aufgerufen | ok |
-| 3 | Ungültiges runner_config JSON | runner_config-Feld mit "not json" | Save klicken | Fehlermeldung, kein API-Aufruf | ok |
-| 4 | Publish-Validierungsfehler → DRAFT | Validate gibt Fehler zurück | Publish klicken | Status bleibt DRAFT, Fehler gezeigt | ok |
+| 1 | Slug auto-generated from name | New space form | Enter name | Slug is filled automatically | ok |
+| 2 | "Save as Draft" sends correct payload | Form filled | Click save button | createSpace() called with expected data | ok |
+| 3 | Invalid runner_config JSON | runner_config field with "not json" | Click save | Error message, no API call | ok |
+| 4 | Publish validation error -> stays DRAFT | Validate returns errors | Click publish | Status stays DRAFT, errors shown | ok |
 
 ---
 
-#### 2.4  JobDetail.test.tsx – 4 Tests (Seite: /jobs/{id})
+#### 2.4  JobDetail.test.tsx – 4 tests (page: /jobs/{id})
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | Warteschlangen-Position angezeigt | Job mit status: QUEUED, Position 3 | Seite mounten | "Queue position: 3" sichtbar | ok |
-| 2 | Polling während RUNNING | Job wechselt QUEUED→RUNNING→SUCCEEDED | Seite mounten, Timers voranschreiten | Fortschrittsbalken → Ergebnis | ok |
-| 3 | Ergebnis nach SUCCEEDED | Job mit Artefakten | Seite mounten nach Erfolg | Artefakte downloadbar gelistet | ok |
-| 4 | Job abbrechen | Laufender Job | Cancel-Button klicken | cancelJob() aufgerufen, Bestätigung | ok |
+| 1 | Queue position shown | Job with status: QUEUED, position 3 | Mount page | "Queue position: 3" visible | ok |
+| 2 | Polling while RUNNING | Job transitions QUEUED->RUNNING->SUCCEEDED | Mount page, advance timers | Progress bar -> result | ok |
+| 3 | Result after SUCCEEDED | Job with artifacts | Mount page after success | Artifacts listed and downloadable | ok |
+| 4 | Cancel job | Running job | Click cancel button | cancelJob() called, confirmation | ok |
 
 ---
 
-#### 2.5  Home.test.tsx – 2 Tests (Startseite /)
+#### 2.5  Home.test.tsx – 2 tests (page: /)
 
-| # | Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| # | What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|---|
-| 1 | Validierung: Pflichtfeld leer | Space mit required input | Submit ohne Eingabe | Fehlermeldung, kein Job | ok |
-| 2 | Erfolgreiche Eingabe → Navigation | Felder befüllt | Submit | submitJob() aufgerufen, Weiterleitung | ok |
+| 1 | Validation: required field empty | Space with a required input | Submit without input | Error message, no job created | ok |
+| 2 | Successful input -> navigation | Fields filled | Submit | submitJob() called, redirect | ok |
 
 ---
 
-## 3  Last-Test (Load Test)
+## 3  Load Test
 
-Werkzeug: scripts/loadtest.py – httpx ASGI-Transport gegen In-Memory-SQLite (kein echter Netzwerk-Hop)
-Konfiguration: 2.000 Requests, 50 gleichzeitige Verbindungen
-Seeded Daten: 5 veröffentlichte Public-Spaces
+Tool: scripts/loadtest.py – httpx ASGI transport against in-memory SQLite (no real network hop)
+Configuration: 2,000 requests, 50 concurrent connections
+Seeded data: 5 published public spaces
 
-Ausführung:
+Run:
 ```
 cd apps/backend
 python -m scripts.loadtest
 ```
 
-### LT-01 – GET /health (Health-Check-Endpunkt)
+### LT-01 – GET /health (health check endpoint)
 
-| Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|
-| Durchsatz des Health-Endpunkts bei 50 gleichzeitigen Clients | Backend ASGI in-process, SQLite In-Memory | 2.000 GET /health Requests mit Concurrency 50 | Durchsatz > 500 req/s, 0 Fehler, p99 < 10 ms | ok |
+| Throughput of the health endpoint with 50 concurrent clients | Backend ASGI in-process, SQLite in-memory | 2,000 GET /health requests with concurrency 50 | Throughput > 500 req/s, 0 errors, p99 < 10 ms | ok |
 
-Messwerte (2026-07-05):
+Results (2026-07-05):
 
-| Metrik | Wert |
+| Metric | Value |
 |---|---|
-| Requests gesamt | 2.000 |
-| Durchsatz | 1.894 req/s |
-| Fehler | 0 |
-| Latenz p50 | 0,5 ms |
-| Latenz p95 | 0,6 ms |
-| Latenz p99 | 0,7 ms |
-| Latenz min / mean / max | 0,5 / 0,5 / 26,9 ms |
+| Total requests | 2,000 |
+| Throughput | 1,894 req/s |
+| Errors | 0 |
+| Latency p50 | 0.5 ms |
+| Latency p95 | 0.6 ms |
+| Latency p99 | 0.7 ms |
+| Latency min / mean / max | 0.5 / 0.5 / 26.9 ms |
 
 ---
 
-### LT-02 – GET /spaces (Spaces-Liste mit DB-Abfrage)
+### LT-02 – GET /spaces (space list with DB query)
 
-| Was wird getestet | Voraussetzungen | Vorgehen | Erwartetes Ergebnis | Testergebnis |
+| What is tested | Prerequisites | Steps | Expected result | Test result |
 |---|---|---|---|---|
-| Durchsatz des Spaces-Endpunkts (ORM-Abfrage + JSON-Serialisierung) bei 50 gleichzeitigen Clients | 5 Spaces in In-Memory-SQLite | 2.000 GET /spaces Requests mit Concurrency 50 | Durchsatz > 100 req/s, 0 Fehler | ok |
+| Throughput of the spaces endpoint (ORM query + JSON serialization) with 50 concurrent clients | 5 spaces in in-memory SQLite | 2,000 GET /spaces requests with concurrency 50 | Throughput > 100 req/s, 0 errors | ok |
 
-Messwerte (2026-07-05):
+Results (2026-07-05):
 
-| Metrik | Wert |
+| Metric | Value |
 |---|---|
-| Requests gesamt | 2.000 |
-| Durchsatz | 517 req/s |
-| Fehler | 0 |
-| Latenz p50 | 88,6 ms |
-| Latenz p95 | 116,9 ms |
-| Latenz p99 | 125,9 ms |
-| Latenz min / mean / max | 38,3 / 88,6 / 130,1 ms |
+| Total requests | 2,000 |
+| Throughput | 517 req/s |
+| Errors | 0 |
+| Latency p50 | 88.6 ms |
+| Latency p95 | 116.9 ms |
+| Latency p99 | 125.9 ms |
+| Latency min / mean / max | 38.3 / 88.6 / 130.1 ms |
 
-Die höhere Latenz bei /spaces im Vergleich zu /health kommt von der SQLAlchemy ORM-Abfrage mit Visibility-Filter und anschließender JSON-Serialisierung. Unter echter PostgreSQL mit Netzwerk-Hop sind die Werte produkionsrelevanter.
+The higher latency for /spaces compared to /health comes from the SQLAlchemy ORM query with visibility filter and subsequent JSON serialization. With a real PostgreSQL instance and network overhead the values would be more representative of a production environment.
 
 ---
 
-## 4  Manuelle Tests (Manuelles Durchklicken)
+## 4  Manual Tests
 
-Testumgebung:
-- Backend: uvicorn app.main:app auf Port 8000, AUTH_PROVIDER=dev
-- Frontend: npm run dev auf Port 5173
-- Datenbank: PostgreSQL via Docker (docker compose up -d postgres)
-- Für Rollen-Tests: Keycloak (docker compose up -d keycloak), Testuser admin/admin123
-- Datum der Durchführung: 2026-06-23 / 2026-07-05
-
----
-
-### 4.1  Space anlegen und als Draft speichern
-
-#### TF-01 (Positiv) – Space als Entwurf speichern
-
-| Feld | Inhalt |
-|---|---|
-| Was wird getestet | Anlegen eines neuen Space und Speichern als Draft (Creator) |
-| Voraussetzungen | Angemeldet als space_creator oder admin; auf /creator → "New Space" |
-| Vorgehen | Name "Image Magic" eingeben (Slug wird automatisch zu image-magic), Container-Image ghcr.io/org/model:latest eingeben, mindestens ein Input-Feld definieren, "Save as Draft" klicken |
-| Erwartetes Ergebnis | HTTP 201; Weiterleitung auf die Edit-Seite; Status-Badge zeigt DRAFT; Space taucht in "My Spaces" auf |
-| Testergebnis | ok |
-
-#### TF-02 (Fehlerfall) – Pflichtfeld leer
-
-| Feld | Inhalt |
-|---|---|
-| Was wird getestet | Speichern mit leerem Pflichtfeld (z. B. Container-Image oder Name) |
-| Voraussetzungen | Wie TF-01, "New Space" geöffnet |
-| Vorgehen | Name leer lassen (oder Container-Image leer), "Save as Draft" klicken |
-| Erwartetes Ergebnis | Es wird kein gültiger Space angelegt; die fehlenden Pflichtangaben fallen spätestens beim Publish-Validate auf (TF-04). Die Anwendung zeigt einen Fehler; kein 500er |
-| Testergebnis | ok |
+Test environment:
+- Backend: uvicorn app.main:app on port 8000, AUTH_PROVIDER=dev
+- Frontend: npm run dev on port 5173
+- Database: PostgreSQL via Docker (docker compose up -d postgres)
+- For role tests: Keycloak (docker compose up -d keycloak), test user admin/admin123
+- Date of execution: 2026-06-23 / 2026-07-05
 
 ---
 
-### 4.2  Space mit ungültiger Config publizieren
+### 4.1  Create a Space and save as draft
 
-#### TF-03 (Positiv) – Gültige Config publizieren
+#### TF-01 (positive) – Save space as draft
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Veröffentlichen eines Space mit gültiger ui_config/runner_config |
-| Voraussetzungen | Draft-Space mit gültigem Input-Feld (Name passt zu ^[A-Za-z_][A-Za-z0-9_]*$, Typ, Label), gültigem Container-Image und runner_config {} |
-| Vorgehen | Auf der Edit-Seite "Publish" klicken |
-| Erwartetes Ergebnis | Validierung meldet "Configuration is valid"; Status wechselt auf PUBLISHED; Space erscheint im öffentlichen Space-Hub |
-| Testergebnis | ok |
+| What is tested | Creating a new space and saving it as draft (creator) |
+| Prerequisites | Logged in as space_creator or admin; on /creator -> "New Space" |
+| Steps | Enter name "Image Magic" (slug is auto-filled as image-magic), enter container image ghcr.io/org/model:latest, define at least one input field, click "Save as Draft" |
+| Expected result | HTTP 201; redirect to edit page; status badge shows DRAFT; space appears in "My Spaces" |
+| Test result | ok |
 
-#### TF-04 (Fehlerfall) – Ungültige Config publizieren
+#### TF-02 (error case) – Required field empty
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Publish mit ungültiger Konfiguration (z. B. kein Input-Feld, ungültiger Feldname 1abc, select ohne Options, oder leeres Container-Image) |
-| Voraussetzungen | Draft-Space mit absichtlich fehlerhafter Config |
-| Vorgehen | "Publish" klicken |
-| Erwartetes Ergebnis | Validierungsfehler wird angezeigt (Liste der field/message-Einträge); Space bleibt im Status DRAFT; pro betroffenem Feld erscheint eine Fehlermarkierung |
-| Testergebnis | ok |
-
-#### TF-05 (Fehlerfall) – Ungültiges runner_config-JSON
-
-| Feld | Inhalt |
-|---|---|
-| Was wird getestet | runner_config-Textfeld mit ungültigem JSON |
-| Voraussetzungen | Edit-Seite eines Space geöffnet |
-| Vorgehen | In runner_config ungültigen Text (z. B. not json) eingeben, "Save as Draft"/"Publish" klicken |
-| Erwartetes Ergebnis | Meldung "runner_config must be a valid JSON object"; es wird keine API-Anfrage gesendet |
-| Testergebnis | ok |
+| What is tested | Saving with an empty required field (e.g. container image or name) |
+| Prerequisites | Same as TF-01, "New Space" open |
+| Steps | Leave name empty (or container image empty), click "Save as Draft" |
+| Expected result | No valid space is created; missing required fields are caught at the latest on publish/validate (TF-04). The application shows an error; no 500 |
+| Test result | ok |
 
 ---
 
-### 4.3  Job absenden und Ergebnis abrufen
+### 4.2  Publish a space with invalid config
 
-#### TF-06 (Positiv) – Job absenden und Ergebnis sehen
+#### TF-03 (positive) – Publish with valid config
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Absenden eines Jobs für einen veröffentlichten Space und Abruf des Ergebnisses |
-| Voraussetzungen | Veröffentlichter, öffentlicher Space mit mind. einem Input; angemeldeter Nutzer |
-| Vorgehen | Space im Hub öffnen, Eingabefelder ausfüllen, "Submit" klicken; auf der Job-Seite den Status verfolgen bis SUCCEEDED; Artefakte ansehen/herunterladen |
-| Erwartetes Ergebnis | HTTP 201 mit status=QUEUED und Queue-Position; Job durchläuft STARTING→RUNNING→SUCCEEDED; Ausgabe-Artefakte werden gelistet und sind als Preview/Download abrufbar |
-| Testergebnis | ok |
+| What is tested | Publishing a space with valid ui_config/runner_config |
+| Prerequisites | Draft space with a valid input field (name matches ^[A-Za-z_][A-Za-z0-9_]*$, type, label), valid container image and runner_config {} |
+| Steps | Click "Publish" on the edit page |
+| Expected result | Validation reports "Configuration is valid"; status changes to PUBLISHED; space appears in the public Space Hub |
+| Test result | ok |
 
-#### TF-07 (Fehlerfall) – Leere/ungültige Eingabe
+#### TF-04 (error case) – Publish with invalid config
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Absenden ohne Pflichteingabe |
-| Voraussetzungen | Space mit einem als required markierten Input |
-| Vorgehen | Pflichtfeld leer lassen, "Submit" klicken |
-| Erwartetes Ergebnis | Validierungshinweis (z. B. "… is required"); es wird kein Job angelegt |
-| Testergebnis | ok |
+| What is tested | Publish with invalid configuration (e.g. no input field, invalid field name 1abc, select without options, or empty container image) |
+| Prerequisites | Draft space with intentionally faulty config |
+| Steps | Click "Publish" |
+| Expected result | Validation errors are shown (list of field/message entries); space stays in status DRAFT; an error marker appears for each affected field |
+| Test result | ok |
+
+#### TF-05 (error case) – Invalid runner_config JSON
+
+| Field | Content |
+|---|---|
+| What is tested | runner_config text field with invalid JSON |
+| Prerequisites | Space edit page open |
+| Steps | Enter invalid text in runner_config (e.g. not json), click "Save as Draft"/"Publish" |
+| Expected result | Message "runner_config must be a valid JSON object"; no API request is sent |
+| Test result | ok |
 
 ---
 
-### 4.4  Job abbrechen
+### 4.3  Submit a job and retrieve the result
 
-#### TF-08 (Positiv) – Job in der Warteschlange abbrechen
+#### TF-06 (positive) – Submit a job and see the result
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Abbrechen eines QUEUED-Jobs (sofortiger Abbruch) |
-| Voraussetzungen | Eigener Job im Status QUEUED |
-| Vorgehen | Auf der Job-Seite "Cancel" klicken |
-| Erwartetes Ergebnis | HTTP 200; Status wechselt direkt auf CANCELLED |
-| Testergebnis | ok |
+| What is tested | Submitting a job for a published space and retrieving the result |
+| Prerequisites | Published public space with at least one input; logged-in user |
+| Steps | Open space in the hub, fill in input fields, click "Submit"; follow the status on the job page until SUCCEEDED; view/download artifacts |
+| Expected result | HTTP 201 with status=QUEUED and queue position; job transitions STARTING->RUNNING->SUCCEEDED; output artifacts are listed and available as preview/download |
+| Test result | ok |
 
-#### TF-09 (Positiv) – Laufenden Job abbrechen
+#### TF-07 (error case) – Empty/invalid input
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Abbrechen eines STARTING/RUNNING-Jobs (zweistufig) |
-| Voraussetzungen | Eigener Job im Status RUNNING |
-| Vorgehen | "Cancel" klicken; Orchestrator beendet den Worker |
-| Erwartetes Ergebnis | Status wechselt zunächst auf CANCELLING; nach Bestätigung durch den Orchestrator auf CANCELLED mit gesetztem finished_at |
-| Testergebnis | ok |
-
-#### TF-10 (Fehlerfall) – Abbruch eines abgeschlossenen Jobs
-
-| Feld | Inhalt |
-|---|---|
-| Was wird getestet | Abbrechen eines bereits terminalen Jobs (SUCCEEDED/FAILED/CANCELLED) |
-| Voraussetzungen | Eigener Job in einem terminalen Status |
-| Vorgehen | "Cancel" erneut auslösen |
-| Erwartetes Ergebnis | HTTP 409 (Conflict), keine Statusänderung, kein 500er |
-| Testergebnis | ok |
+| What is tested | Submit without required input |
+| Prerequisites | Space with a required input field |
+| Steps | Leave required field empty, click "Submit" |
+| Expected result | Validation hint (e.g. "… is required"); no job is created |
+| Test result | ok |
 
 ---
 
-### 4.5  Job aus History löschen
+### 4.4  Cancel a job
 
-#### TF-11 (Positiv) – Eigenen Job aus History löschen
+#### TF-08 (positive) – Cancel a queued job
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Entfernen eines Jobs aus der eigenen History |
-| Voraussetzungen | Angemeldet; mind. ein eigener Job in /me/history |
-| Vorgehen | In der History "Löschen" beim Job klicken |
-| Erwartetes Ergebnis | HTTP 204; Job und zugehörige Artefakt-Zeilen verschwinden aus der History |
-| Testergebnis | ok |
+| What is tested | Cancelling a QUEUED job (immediate cancellation) |
+| Prerequisites | Own job in status QUEUED |
+| Steps | Click "Cancel" on the job page |
+| Expected result | HTTP 200; status changes directly to CANCELLED |
+| Test result | ok |
 
-#### TF-12 (Fehlerfall) – Fremden Job löschen
+#### TF-09 (positive) – Cancel a running job
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Löschversuch für einen Job, der einem anderen Nutzer gehört |
-| Voraussetzungen | Zwei Nutzer A und B; Job gehört A; angemeldet als B |
-| Vorgehen | DELETE auf /me/history/{public_id} des fremden Jobs (z. B. via API) |
-| Erwartetes Ergebnis | HTTP 403 (Forbidden); Job bleibt erhalten. Nicht existierende ID → HTTP 404 |
-| Testergebnis | ok |
+| What is tested | Cancelling a STARTING/RUNNING job (two-step) |
+| Prerequisites | Own job in status RUNNING |
+| Steps | Click "Cancel"; orchestrator stops the worker |
+| Expected result | Status changes first to CANCELLING; after confirmation by the orchestrator to CANCELLED with finished_at set |
+| Test result | ok |
+
+#### TF-10 (error case) – Cancel a finished job
+
+| Field | Content |
+|---|---|
+| What is tested | Cancelling an already terminal job (SUCCEEDED/FAILED/CANCELLED) |
+| Prerequisites | Own job in a terminal status |
+| Steps | Trigger "Cancel" again |
+| Expected result | HTTP 409 (Conflict), no status change, no 500 |
+| Test result | ok |
 
 ---
 
-### 4.6  Rollen / Zugriffsschutz
+### 4.5  Delete a job from history
 
-#### TF-13 (Positiv) – Creator/Admin sehen ihre Bereiche
+#### TF-11 (positive) – Delete own job from history
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Sichtbarkeit der Creator-/Admin-Bereiche für berechtigte Rollen |
-| Voraussetzungen | auth_provider=oidc; Keycloak mit Accounts space_creator und admin |
-| Vorgehen | Als space_creator /creator öffnen; als admin /admin öffnen |
-| Erwartetes Ergebnis | Berechtigte sehen ihre Bereiche und können die jeweiligen Endpunkte nutzen |
-| Testergebnis | ok |
+| What is tested | Removing a job from the own history |
+| Prerequisites | Logged in; at least one own job in /me/history |
+| Steps | Click "Delete" on a job in the history |
+| Expected result | HTTP 204; job and associated artifact rows disappear from the history |
+| Test result | ok |
 
-#### TF-14 (Fehlerfall) – end_user hat keinen Zugriff
+#### TF-12 (error case) – Delete a foreign job
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | end_user sieht keine Creator-/Admin-Seiten und wird serverseitig abgewiesen |
-| Voraussetzungen | auth_provider=oidc; Account mit Rolle end_user |
-| Vorgehen | Als end_user einloggen; Navigation prüfen; direkt /creator/spaces bzw. /admin/spaces per API aufrufen |
-| Erwartetes Ergebnis | Creator-/Admin-Navigation ist ausgeblendet; direkte API-Aufrufe liefern HTTP 403 |
-| Testergebnis | ok |
+| What is tested | Deletion attempt for a job that belongs to another user |
+| Prerequisites | Two users A and B; job belongs to A; logged in as B |
+| Steps | DELETE on /me/history/{public_id} of the foreign job (e.g. via API) |
+| Expected result | HTTP 403 (Forbidden); job is retained. Non-existing ID -> HTTP 404 |
+| Test result | ok |
 
 ---
 
-### 4.7  Layout / Robustheit
+### 4.6  Roles / access control
 
-#### TF-15 – Kurze und lange Eingaben
+#### TF-13 (positive) – Creator/Admin see their areas
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Layout-Verhalten bei sehr kurzen und sehr langen Eingaben |
-| Voraussetzungen | Edit-Seite eines Space; Space-Hub |
-| Vorgehen | Name/Beschreibung einmal sehr kurz (1 Zeichen) und einmal sehr lang (mehrere hundert Zeichen) eingeben; Darstellung in Karten, Editor und Job-Seite prüfen |
-| Erwartetes Ergebnis | Kein Überlaufen/Abschneiden, das die Bedienung blockiert; Texte werden umgebrochen oder sinnvoll gekürzt |
-| Testergebnis | ok |
+| What is tested | Visibility of creator/admin areas for authorized roles |
+| Prerequisites | auth_provider=oidc; Keycloak with accounts space_creator and admin |
+| Steps | Open /creator as space_creator; open /admin as admin |
+| Expected result | Authorized users see their areas and can use the respective endpoints |
+| Test result | ok |
+
+#### TF-14 (error case) – end_user has no access
+
+| Field | Content |
+|---|---|
+| What is tested | end_user does not see creator/admin pages and is rejected server-side |
+| Prerequisites | auth_provider=oidc; account with role end_user |
+| Steps | Log in as end_user; check navigation; call /creator/spaces and /admin/spaces directly via API |
+| Expected result | Creator/admin navigation is hidden; direct API calls return HTTP 403 |
+| Test result | ok |
 
 ---
 
-## 5  Integrationstest: SAM 3D Objects
+### 4.7  Layout / robustness
 
-### IT-01 – End-to-End Image-to-3D Pipeline (Dev-Mode)
+#### TF-15 – Short and long inputs
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| Was wird getestet | Gesamte Pipeline: Bild hochladen → Runner erzeugt GLB-Datei → Artefakt im System abrufbar |
-| Voraussetzungen | Space "3D Generator – SAM 3D Objects" veröffentlicht; DEV_MODE=1 (kein GPU nötig); Backend + Frontend lokal gestartet |
-| Vorgehen | Space im Hub öffnen; JPEG/PNG hochladen; Job absenden; Status bis SUCCEEDED verfolgen; GLB-Download testen |
-| Erwartetes Ergebnis | Job erreicht SUCCEEDED; .glb-Datei (blauer Demo-Würfel) wird als Download angeboten; Datei öffnet sich in einem 3D-Viewer |
-| Testergebnis | ok |
+| What is tested | Layout behavior with very short and very long inputs |
+| Prerequisites | Space edit page; Space Hub |
+| Steps | Enter name/description once very short (1 character) and once very long (several hundred characters); check display in cards, editor and job page |
+| Expected result | No overflow or clipping that blocks usage; texts are wrapped or truncated sensibly |
+| Test result | ok |
 
 ---
 
-## Anhang: Coverage-Report
+## 5  Integration test: SAM 3D Objects
+
+### IT-01 – End-to-end image-to-3D pipeline (dev mode)
+
+| Field | Content |
+|---|---|
+| What is tested | Full pipeline: upload image -> runner generates GLB file -> artifact retrievable in the system |
+| Prerequisites | Space "3D Generator – SAM 3D Objects" published; DEV_MODE=1 (no GPU required); backend + frontend running locally |
+| Steps | Open space in the hub; upload a JPEG/PNG; submit job; follow status until SUCCEEDED; test GLB download |
+| Expected result | Job reaches SUCCEEDED; .glb file (blue demo cube) is offered as download; file opens in a 3D viewer |
+| Test result | ok |
+
+---
+
+## Appendix: Coverage report
 
 ```
-Backend Branch-Coverage: 80 %
+Backend branch coverage: 80%
   Statements  : 1193 total, 204 not covered
   Branches    : 182 total,   20 partially covered
 
-Testlauf:
+Test run:
   228 passed, 7 skipped
-  Laufzeit: 4,02 s
+  Runtime: 4.02 s
 ```
 
 ```
-Frontend Tests: 24 passed (5 Test-Dateien)
-  Laufzeit: 6,36 s
+Frontend tests: 24 passed (5 test files)
+  Runtime: 6.36 s
 ```
 
 ```
-Load-Test (2026-07-05, 2.000 req, concurrency 50):
-  GET /health  → 1.894 req/s, 0 Fehler, p99 = 0,7 ms
-  GET /spaces  →   517 req/s, 0 Fehler, p99 = 125,9 ms
+Load test (2026-07-05, 2,000 req, concurrency 50):
+  GET /health  -> 1,894 req/s, 0 errors, p99 = 0.7 ms
+  GET /spaces  ->   517 req/s, 0 errors, p99 = 125.9 ms
 ```
