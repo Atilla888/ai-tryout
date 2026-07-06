@@ -33,7 +33,7 @@ services:
       - "8080:8080"
     volumes:
       - keycloak_data:/opt/keycloak/data
-      - ./infra/keycloak/ai-spaces-realm.json:/opt/keycloak/data/import/ai-spaces-realm.json:ro
+      - ./infra/k8s/keycloak/ai-spaces-realm.json:/opt/keycloak/data/import/ai-spaces-realm.json:ro
 
   backend:
     build:

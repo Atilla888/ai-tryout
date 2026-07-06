@@ -1,124 +1,211 @@
-# AI-Spaces — Quick Start (everything already installed)
+# AI-Spaces — Quick Start
 
-This guide is for anyone who has already set the project up once on their laptop
-(Docker, the Python `venv`, and `npm install` are done). It shows the commands
-you run **every time** you want to start the app. No setup steps here.
+Two paths to a running application. Pick the one that fits your setup.
 
-If this is your very first time on this machine, do the one-time setup in
-[RUN_CHEATSHEET.md](RUN_CHEATSHEET.md) first.
-
----
-
-## Why 4 terminals?
-
-The app is made of separate programs that all need to run **at the same time**.
-Each one has to keep running and "hold" its terminal window (it prints logs and
-won't give the prompt back). So you open **one terminal tab per program** and
-just leave it running.
-
-| Terminal | Program | What it does |
-|----------|---------|--------------|
-| 1 | Postgres (in Docker) | The database |
-| 2 | Backend | The API on port 8000 |
-| 3 | Orchestrator | Runs the jobs you submit *(optional)* |
-| 4 | Frontend | The website on port 5173 |
-
-> **Tip:** In Windows Terminal, press `Ctrl` + `Shift` + `T` to open a new tab.
-> Each tab should start in the project root
-> (`...\Git_repo`). If not, `cd` into it first.
-
-For just clicking around the website you only need terminals **1, 2, and 4**.
-Add terminal **3** only when you want submitted jobs to actually run.
+| | Path A: Docker Compose | Path B: Kubernetes (kind) |
+|---|---|---|
+| Setup time | ~5 minutes | ~10 minutes |
+| Requirements | Docker, Python 3.12+, Node 20+ | Docker, Python 3.12+, Node 20+ |
+| Runs on | Mac, Windows, Linux | Mac, Linux (Windows: WSL2) |
+| Auth | Dev mode (no login needed) | Keycloak (full OIDC login) |
+| AI Spaces | Fake runner (text only) | ACE-Step + SAM 3D (mock) |
+| Good for | Quick look, testing the API | Full platform demo |
 
 ---
 
-## The commands
+## Path A: Docker Compose
 
-### 🖥️ Terminal 1 — Database
+Everything runs in Docker. No manual service management.
 
-Run from the project root:
+### Requirements
 
-```powershell
-docker compose up -d postgres
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- Python 3.12+ with `pip`
+- Node 20+
+
+### Steps
+
+**1. Clone and configure**
+
+```bash
+git clone https://gitlab.hof-university.de/atilla888/ai-spaces.git
+cd ai-spaces
+cp .env.example .env
 ```
 
-This one returns the prompt right away (Docker runs it in the background). You
-can leave the tab or reuse it.
+**2. Create Python venv and install dependencies**
 
-### 🖥️ Terminal 2 — Backend (port 8000)
-
-```powershell
-cd apps\backend
-..\..\venv\Scripts\uvicorn.exe app.main:app --reload --host 127.0.0.1 --port 8000
+Mac / Linux:
+```bash
+python3 -m venv venv
+venv/bin/pip install -r apps/backend/requirements.txt
+venv/bin/pip install -r apps/orchestrator/requirements.txt
 ```
 
-Leave this running. It keeps printing logs — that's normal.
-
-### 🖥️ Terminal 3 — Orchestrator (optional — only for running jobs)
-
+Windows (PowerShell):
 ```powershell
-cd apps\orchestrator
-$env:API_BASE_URL = "http://127.0.0.1:8000"
-$env:INTERNAL_SERVICE_TOKEN = "changeme-internal-token"
-$env:CONCURRENCY_LIMIT = "2"
-$env:POLL_INTERVAL_SECONDS = "3"
-..\..\venv\Scripts\python.exe main.py
+python -m venv venv
+venv\Scripts\pip install -r apps\backend\requirements.txt
+venv\Scripts\pip install -r apps\orchestrator\requirements.txt
 ```
 
-Leave this running too. When idle it just polls every few seconds.
+**3. Install frontend dependencies**
 
-### 🖥️ Terminal 4 — Frontend (the website)
+```bash
+cd apps/frontend
+npm install
+cd ../..
+```
 
-```powershell
-cd apps\frontend
+**4. Start everything**
+
+```bash
+docker compose up
+```
+
+This starts Postgres, Keycloak, the backend, and the orchestrator together.
+Wait ~30 seconds for Keycloak to be ready, then open a second terminal for the frontend:
+
+```bash
+cd apps/frontend
 npm run dev
 ```
 
-Leave it running, then open **http://localhost:5173** in your browser. 🎉
+**5. Open the app**
+
+http://localhost:5173
+
+The backend runs with `AUTH_PROVIDER=oidc` in Docker Compose. To log in,
+create a Keycloak user (see step 6) or switch to dev mode (see Troubleshooting).
+
+**6. Create a login user (Keycloak)**
+
+Run this once after `docker compose up`:
+
+```bash
+# Get admin token
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
+  -d "client_id=admin-cli&grant_type=password&username=admin&password=admin" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+
+# Create user
+curl -s -X POST http://localhost:8080/admin/realms/ai-spaces/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@example.com","firstName":"Test","lastName":"User","enabled":true,"credentials":[{"type":"password","value":"test123","temporary":false}]}'
+
+# Assign admin role
+USER_ID=$(curl -s "http://localhost:8080/admin/realms/ai-spaces/users?username=testuser" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
+ROLE=$(curl -s http://localhost:8080/admin/realms/ai-spaces/roles/admin \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+curl -s -X POST "http://localhost:8080/admin/realms/ai-spaces/users/$USER_ID/role-mappings/realm" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d "[$ROLE]"
+
+echo "Done — login with testuser / test123"
+```
+
+**7. Apply database migrations**
+
+```bash
+# Mac / Linux
+cd apps/backend
+../../venv/bin/alembic upgrade head
+
+# Windows
+cd apps\backend
+..\..\venv\Scripts\alembic upgrade head
+```
+
+### Check it works
+
+```bash
+curl http://localhost:8000/health
+# expected: {"status":"ok"}
+```
+
+### Stop
+
+```bash
+docker compose down
+# also in the frontend terminal: Ctrl+C
+```
 
 ---
 
-## Is it working?
+## Path B: Kubernetes with kind
 
-In any spare terminal:
+Full platform on a local Kubernetes cluster. Includes Keycloak, both mock AI Spaces, and the full orchestrator.
 
-```powershell
-curl.exe http://127.0.0.1:8000/health
+### Requirements
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- Python 3.12+ with `pip`
+- Node 20+
+- `kubectl` installed (`brew install kubectl` on Mac)
+
+The setup script installs `kind` automatically via Homebrew (Mac) or the kind release binary (Linux).
+
+### One-command setup
+
+```bash
+bash scripts/setup-kind.sh
 ```
 
-You should see:
+The script (~5 minutes):
+1. Installs `kind` if missing
+2. Creates a cluster named `ai-spaces`
+3. Builds all three Docker images (backend, frontend, orchestrator)
+4. Loads images into the cluster
+5. Deploys all services (Postgres, Keycloak, backend, orchestrator, frontend)
+6. Waits for all pods to be ready
+7. Starts port-forwards
+8. Creates a test user in Keycloak
+9. Registers both mock AI Spaces (ACE-Step + SAM 3D)
 
-```json
-{"status":"ok"}
+When it finishes you will see:
+
+```
+Frontend:  http://localhost:5173   (login: testuser / test123)
+Backend:   http://localhost:8000
+Keycloak:  http://localhost:8080   (admin: admin / admin123)
 ```
 
-If yes, the backend is up. Then just open http://localhost:5173.
+### Manual steps (if the script fails)
+
+See the commands inside `scripts/setup-kind.sh` — every step is documented inline.
+
+### Restart port-forwards after reboot
+
+Port-forwards do not survive a terminal close. Run this to restore them:
+
+```bash
+kubectl port-forward -n ai-spaces svc/frontend 5173:80 &
+kubectl port-forward -n ai-spaces svc/backend 8000:8000 &
+kubectl port-forward -n ai-spaces svc/keycloak 8080:8080 &
+```
+
+### Stop / delete cluster
+
+```bash
+kind delete cluster --name ai-spaces
+```
 
 ---
 
-## How to stop
+## Troubleshooting
 
-Go to each running terminal and press **`Ctrl` + `C`**. Do it in this order:
+| Problem | Fix |
+|---|---|
+| `docker: command not found` | Docker Desktop is not running |
+| Backend can't reach Postgres | In `.env` change `localhost` to `127.0.0.1` in `DATABASE_URL` |
+| Login redirect loop | Keycloak not started yet — wait 30s and retry |
+| Job submitted, nothing happens | Orchestrator not running — start it (Path A: it's in `docker compose up`) |
+| Port already in use | `lsof -i :8000` (Mac/Linux) or `netstat -ano | findstr :8000` (Windows) |
+| Kind cluster already exists | `kind delete cluster --name ai-spaces` then run script again |
 
-1. Frontend (Terminal 4)
-2. Orchestrator (Terminal 3)
-3. Backend (Terminal 2)
+### Dev mode (skip login entirely)
 
-Then stop the database from the project root:
-
-```powershell
-docker compose stop postgres
-```
-
----
-
-## If something goes wrong
-
-| Problem | What to do |
-|---------|-----------|
-| Backend seems stuck / can't reach the database | Open `.env` and change `DATABASE_URL` host from `localhost` to `127.0.0.1` (a Windows quirk on this setup) |
-| Website loads but data won't save/load | Make sure Terminal 2 (backend) is still running |
-| Submitted a job but nothing happens | Terminal 3 (orchestrator) isn't running — start it |
-| `Ctrl + C` doesn't stop it | Close the terminal tab |
-
-Full details and one-time setup are in [RUN_CHEATSHEET.md](RUN_CHEATSHEET.md).
+Edit `.env` and set `AUTH_PROVIDER=dev`, then restart the backend.
+In dev mode every request is treated as admin — no Keycloak needed.
