@@ -1,0 +1,23 @@
+services:
+  nfs:
+    image: itsthenetwork/nfs-server-alpine:latest
+    container_name: ai-spaces-nfs
+    privileged: true
+    restart: unless-stopped
+
+    environment:
+      SHARED_DIRECTORY: /exports/ai-spaces-artifacts
+
+    volumes:
+      - ai-spaces-nfs-data:/exports/ai-spaces-artifacts
+    
+    networks:
+      - kind
+
+volumes:
+  ai-spaces-nfs-data:
+    name: ai-spaces-nfs-data
+
+networks:
+  kind:
+    external: true

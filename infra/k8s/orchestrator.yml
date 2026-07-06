@@ -1,0 +1,95 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: orchestrator-config
+  namespace: ai-spaces
+data:
+  API_BASE_URL: "http://backend:8000"
+  RUNNER_BACKEND: "kubernetes"
+  K8S_NAMESPACE: "ai-spaces"
+  CONCURRENCY_LIMIT: "2"
+  POLL_INTERVAL_SECONDS: "5"
+
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: orchestrator
+  namespace: ai-spaces
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: orchestrator-job-manager
+  namespace: ai-spaces
+rules:
+  - apiGroups:
+    - batch
+    resources:
+      - jobs
+      - jobs/status
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+      - delete
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: orchestrator-job-manager-binding
+  namespace: ai-spaces
+subjects:
+  - kind: ServiceAccount
+    name: orchestrator
+    namespace: ai-spaces
+roleRef:
+  kind: Role
+  name: orchestrator-job-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: orchestrator
+  namespace: ai-spaces
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: orchestrator
+  
+  template:
+    metadata:
+      labels:
+        app: orchestrator
+
+    spec:
+      serviceAccountName: orchestrator
+      containers:
+        - name: orchestrator
+          image: ai-spaces-orchestrator:dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: orchestrator-config
+          env:
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: INTERNAL_SERVICE_TOKEN
+
+
+          resources:
+            requests:
+              cpu: 80m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

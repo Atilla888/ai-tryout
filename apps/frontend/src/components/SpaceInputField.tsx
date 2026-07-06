@@ -101,11 +101,16 @@ function SpaceInputField({ config, value, error, onChange }: SpaceInputFieldProp
             onChange={(e) => onChange(name, e.target.value)}
           >
             <option value="">{placeholder ?? 'Select an option'}</option>
-            {(options ?? []).map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
+            {(options ?? []).map((opt) => {
+              // Options may be plain strings (creator-defined) or {value,label} objects.
+              const optValue = typeof opt === 'string' ? opt : opt.value
+              const optLabel = typeof opt === 'string' ? opt : opt.label
+              return (
+                <option key={optValue} value={optValue}>
+                  {optLabel}
+                </option>
+              )
+            })}
           </select>
         )
       case 'image_upload':

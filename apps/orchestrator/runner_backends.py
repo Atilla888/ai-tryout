@@ -143,18 +143,53 @@ class KubernetesRunnerBackend(RunnerBackend):
         if not runner_image:
             raise ValueError(f"job={job_id} has no runner image in execution data")
 
-        env_vars = [
-            self._client.V1EnvVar(name=key, value=value)
-            for key, value in _runner_env(job_id, execution_data, self.api_base_url, self.service_token).items()
-        ]
+        runner_config = execution_data.get("runner_config") or {}
+
+        # Base contract env, plus any space-defined extras (e.g. model variant,
+        # output format) from runner_config.env.
+        env = _runner_env(job_id, execution_data, self.api_base_url, self.service_token)
+        for key, value in (runner_config.get("env") or {}).items():
+            env[str(key)] = str(value)
+        env_vars = [self._client.V1EnvVar(name=key, value=value) for key, value in env.items()]
+
+        # GPU request: models like ACE-Step need a GPU scheduled onto the pod.
+        # Without this every runner lands on a CPU node (spec F2).
+        resources = None
+        gpu = runner_config.get("gpu")
+        if isinstance(gpu, int) and not isinstance(gpu, bool) and gpu > 0:
+            resources = self._client.V1ResourceRequirements(limits={"nvidia.com/gpu": str(gpu)})
+
+        # Optional model-weights volume so multi-GB weights are mounted (e.g. from
+        # an NFS-backed PVC shared across runners) instead of baked into the image.
+        volumes = None
+        volume_mounts = None
+        weights_pvc = runner_config.get("weights_pvc")
+        if weights_pvc:
+            mount_path = str(runner_config.get("weights_mount") or "/models")
+            volume_mounts = [self._client.V1VolumeMount(name="model-weights", mount_path=mount_path)]
+            volumes = [
+                self._client.V1Volume(
+                    name="model-weights",
+                    persistent_volume_claim=self._client.V1PersistentVolumeClaimVolumeSource(
+                        claim_name=str(weights_pvc)
+                    ),
+                )
+            ]
+
         container = self._client.V1Container(
             name="runner",
             image=runner_image,
             env=env_vars,
+            resources=resources,
+            volume_mounts=volume_mounts,
         )
         # restart_policy="Never" ensures each pod runs exactly once. Combined with
         # backoff_limit=0 this means K8s will not restart or retry the container.
-        pod_spec = self._client.V1PodSpec(restart_policy="Never", containers=[container])
+        pod_spec = self._client.V1PodSpec(
+            restart_policy="Never",
+            containers=[container],
+            volumes=volumes,
+        )
         template = self._client.V1PodTemplateSpec(
             metadata=self._client.V1ObjectMeta(labels={"app": "ai-spaces-runner", "job-id": str(job_id)}),
             spec=pod_spec,

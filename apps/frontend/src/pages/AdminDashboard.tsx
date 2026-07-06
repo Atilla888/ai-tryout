@@ -129,8 +129,11 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
   }
 
   const ownerLabel = (id: string) => {
-    const u = users.find((u) => u.id === id)
-    return u ? (u.display_name ?? u.email) : id.slice(0, 8) + '…'
+    // owner_id may arrive as an integer (internal id) rather than a user UUID,
+    // so coerce before any string ops and fall back to a readable "#<id>".
+    const key = String(id)
+    const u = users.find((u) => u.id === key)
+    return u ? (u.display_name ?? u.email) : `#${key}`
   }
 
   return (
