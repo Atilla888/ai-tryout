@@ -1,0 +1,62 @@
+{
+  "slug": "acestep-music",
+  "name": "ACE-Step 1.5 — Text to Music",
+  "description": "Generate a music track from a style prompt and optional lyrics using the ACE-Step 1.5 standard model.",
+  "task_type": "Audio",
+  "input_types": ["text"],
+  "output_types": ["audio"],
+  "container_image": "REGISTRY/acestep-runner:1.5",
+  "ui_config": {
+    "inputs": [
+      {
+        "name": "prompt",
+        "type": "text",
+        "label": "Style / prompt",
+        "description": "Genre, mood, instruments, BPM — e.g. 'upbeat electronic with piano, 120bpm'.",
+        "required": true,
+        "maxLength": 512
+      },
+      {
+        "name": "lyrics",
+        "type": "text",
+        "label": "Lyrics (optional)",
+        "description": "Leave empty for an instrumental track.",
+        "required": false,
+        "maxLength": 4096
+      },
+      {
+        "name": "duration",
+        "type": "number",
+        "label": "Duration (seconds)",
+        "description": "10–600. Leave empty for automatic.",
+        "required": false,
+        "min": 10,
+        "max": 600
+      },
+      {
+        "name": "steps",
+        "type": "number",
+        "label": "Quality steps",
+        "description": "Higher = better quality, slower. 60 is a good default for the base model.",
+        "required": false,
+        "min": 1,
+        "max": 200
+      }
+    ]
+  },
+  "runner_config": {
+    "gpu": 1,
+    "weights_pvc": "acestep-models",
+    "weights_mount": "/models",
+    "timeout_seconds": 600,
+    "env": {
+      "ACESTEP_CHECKPOINT_DIR": "/models",
+      "ACESTEP_CONFIG_PATH": "acestep-v15-base",
+      "ACESTEP_LM_MODEL_PATH": "acestep-5Hz-lm-0.6B",
+      "ACESTEP_AUDIO_FORMAT": "mp3",
+      "ACESTEP_STEPS": "60"
+    }
+  },
+  "visibility": "PUBLIC",
+  "status": "PUBLISHED"
+}
