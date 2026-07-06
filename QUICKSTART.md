@@ -1,31 +1,20 @@
-# AI-Spaces — Quick Start
+# AI-Spaces – Quick Start
 
-Two paths to a running application. Pick the one that fits your setup.
+Es gibt zwei Möglichkeiten, die Anwendung lokal zu starten.
 
-| | Path A: Docker Compose | Path B: Kubernetes (kind) |
-|---|---|---|
-| Setup time | ~5 minutes | ~10 minutes |
-| Requirements | Docker, Python 3.12+, Node 20+ | Docker, Python 3.12+, Node 20+ |
-| Runs on | Mac, Windows, Linux | Mac, Linux (Windows: WSL2) |
-| Auth | Dev mode (no login needed) | Keycloak (full OIDC login) |
-| AI Spaces | Fake runner (text only) | ACE-Step + SAM 3D (mock) |
-| Good for | Quick look, testing the API | Full platform demo |
+Docker Compose ist der einfachere Weg und dauert ca. 5 Minuten. Kubernetes mit kind ist aufwändiger, zeigt aber den vollständigen Stack mit Keycloak-Login und echten KI-Spaces.
 
 ---
 
-## Path A: Docker Compose
+## Option A: Docker Compose
 
-Everything runs in Docker. No manual service management.
+Alles läuft in Docker, kein manuelles Starten einzelner Dienste nötig.
 
-### Requirements
+Voraussetzungen: Docker Desktop, Python 3.12+, Node 20+
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- Python 3.12+ with `pip`
-- Node 20+
+### Schritte
 
-### Steps
-
-**1. Clone and configure**
+1. Repository klonen und .env anlegen
 
 ```bash
 git clone https://gitlab.hof-university.de/atilla888/ai-spaces.git
@@ -33,7 +22,7 @@ cd ai-spaces
 cp .env.example .env
 ```
 
-**2. Create Python venv and install dependencies**
+2. Python-Abhängigkeiten installieren
 
 Mac / Linux:
 ```bash
@@ -49,7 +38,7 @@ venv\Scripts\pip install -r apps\backend\requirements.txt
 venv\Scripts\pip install -r apps\orchestrator\requirements.txt
 ```
 
-**3. Install frontend dependencies**
+3. Frontend-Abhängigkeiten installieren
 
 ```bash
 cd apps/frontend
@@ -57,44 +46,37 @@ npm install
 cd ../..
 ```
 
-**4. Start everything**
+4. Dienste starten
 
 ```bash
 docker compose up
 ```
 
-This starts Postgres, Keycloak, the backend, and the orchestrator together.
-Wait ~30 seconds for Keycloak to be ready, then open a second terminal for the frontend:
+Postgres, Keycloak, Backend und Orchestrator starten zusammen. Nach ca. 30 Sekunden ist Keycloak bereit. Dann in einem zweiten Terminal das Frontend:
 
 ```bash
 cd apps/frontend
 npm run dev
 ```
 
-**5. Open the app**
+5. App öffnen: http://localhost:5173
 
-http://localhost:5173
+Das Backend läuft mit `AUTH_PROVIDER=oidc`. Zum Einloggen muss einmalig ein Nutzer in Keycloak angelegt werden (siehe nächster Schritt).
 
-The backend runs with `AUTH_PROVIDER=oidc` in Docker Compose. To log in,
-create a Keycloak user (see step 6) or switch to dev mode (see Troubleshooting).
+6. Keycloak-Testnutzer anlegen
 
-**6. Create a login user (Keycloak)**
-
-Run this once after `docker compose up`:
+Diesen Block einmal ausführen, während `docker compose up` läuft:
 
 ```bash
-# Get admin token
 ADMIN_TOKEN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
   -d "client_id=admin-cli&grant_type=password&username=admin&password=admin" \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
 
-# Create user
 curl -s -X POST http://localhost:8080/admin/realms/ai-spaces/users \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser","email":"test@example.com","firstName":"Test","lastName":"User","enabled":true,"credentials":[{"type":"password","value":"test123","temporary":false}]}'
 
-# Assign admin role
 USER_ID=$(curl -s "http://localhost:8080/admin/realms/ai-spaces/users?username=testuser" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
@@ -103,10 +85,10 @@ ROLE=$(curl -s http://localhost:8080/admin/realms/ai-spaces/roles/admin \
 curl -s -X POST "http://localhost:8080/admin/realms/ai-spaces/users/$USER_ID/role-mappings/realm" \
   -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d "[$ROLE]"
 
-echo "Done — login with testuser / test123"
+echo "Fertig – Login: testuser / test123"
 ```
 
-**7. Apply database migrations**
+7. Datenbankmigrationen ausführen
 
 ```bash
 # Mac / Linux
@@ -118,53 +100,46 @@ cd apps\backend
 ..\..\venv\Scripts\alembic upgrade head
 ```
 
-### Check it works
-
+Schnelltest:
 ```bash
 curl http://localhost:8000/health
-# expected: {"status":"ok"}
+# Erwartet: {"status":"ok"}
 ```
 
-### Stop
-
+Stoppen:
 ```bash
 docker compose down
-# also in the frontend terminal: Ctrl+C
+# im Frontend-Terminal: Ctrl+C
 ```
 
 ---
 
-## Path B: Kubernetes with kind
+## Option B: Kubernetes mit kind
 
-Full platform on a local Kubernetes cluster. Includes Keycloak, both mock AI Spaces, and the full orchestrator.
+Vollständiger Stack auf einem lokalen Kubernetes-Cluster. Enthält Keycloak, beide KI-Spaces (Mock-Modus) und den echten Orchestrator.
 
-### Requirements
+Voraussetzungen: Docker Desktop, Python 3.12+, Node 20+, kubectl (`brew install kubectl`)
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- Python 3.12+ with `pip`
-- Node 20+
-- `kubectl` installed (`brew install kubectl` on Mac)
+`kind` wird vom Setup-Skript automatisch installiert (Homebrew auf Mac, Binary auf Linux).
 
-The setup script installs `kind` automatically via Homebrew (Mac) or the kind release binary (Linux).
-
-### One-command setup
+### Automatisches Setup
 
 ```bash
 bash scripts/setup-kind.sh
 ```
 
-The script (~5 minutes):
-1. Installs `kind` if missing
-2. Creates a cluster named `ai-spaces`
-3. Builds all three Docker images (backend, frontend, orchestrator)
-4. Loads images into the cluster
-5. Deploys all services (Postgres, Keycloak, backend, orchestrator, frontend)
-6. Waits for all pods to be ready
-7. Starts port-forwards
-8. Creates a test user in Keycloak
-9. Registers both mock AI Spaces (ACE-Step + SAM 3D)
+Das Skript macht folgendes (dauert ca. 5–10 Minuten):
+1. kind installieren (falls nicht vorhanden)
+2. Cluster `ai-spaces` erstellen
+3. alle Docker-Images bauen
+4. Images in den Cluster laden
+5. alle Dienste deployen (Postgres, Keycloak, Backend, Orchestrator, Frontend)
+6. auf Ready-Status warten
+7. Port-Forwards starten
+8. Keycloak-Testnutzer anlegen
+9. beide Mock-Spaces registrieren (ACE-Step + SAM 3D)
 
-When it finishes you will see:
+Am Ende erscheint:
 
 ```
 Frontend:  http://localhost:5173   (login: testuser / test123)
@@ -172,13 +147,9 @@ Backend:   http://localhost:8000
 Keycloak:  http://localhost:8080   (admin: admin / admin123)
 ```
 
-### Manual steps (if the script fails)
+### Port-Forwards nach Neustart
 
-See the commands inside `scripts/setup-kind.sh` — every step is documented inline.
-
-### Restart port-forwards after reboot
-
-Port-forwards do not survive a terminal close. Run this to restore them:
+Port-Forwards überleben kein Terminal-Schließen. Wiederherstellen mit:
 
 ```bash
 kubectl port-forward -n ai-spaces svc/frontend 5173:80 &
@@ -186,7 +157,7 @@ kubectl port-forward -n ai-spaces svc/backend 8000:8000 &
 kubectl port-forward -n ai-spaces svc/keycloak 8080:8080 &
 ```
 
-### Stop / delete cluster
+### Cluster löschen
 
 ```bash
 kind delete cluster --name ai-spaces
@@ -194,18 +165,17 @@ kind delete cluster --name ai-spaces
 
 ---
 
-## Troubleshooting
+## Häufige Probleme
 
-| Problem | Fix |
+| Problem | Lösung |
 |---|---|
-| `docker: command not found` | Docker Desktop is not running |
-| Backend can't reach Postgres | In `.env` change `localhost` to `127.0.0.1` in `DATABASE_URL` |
-| Login redirect loop | Keycloak not started yet — wait 30s and retry |
-| Job submitted, nothing happens | Orchestrator not running — start it (Path A: it's in `docker compose up`) |
-| Port already in use | `lsof -i :8000` (Mac/Linux) or `netstat -ano | findstr :8000` (Windows) |
-| Kind cluster already exists | `kind delete cluster --name ai-spaces` then run script again |
+| `docker: command not found` | Docker Desktop ist nicht gestartet |
+| Backend erreicht Postgres nicht | In `.env` den Host von `localhost` auf `127.0.0.1` ändern |
+| Login-Redirect-Schleife | Keycloak noch nicht bereit – 30 Sekunden warten und nochmal |
+| Job läuft nicht an | Orchestrator läuft nicht (bei Option A: in `docker compose up` enthalten) |
+| Port bereits belegt | `lsof -i :8000` (Mac/Linux) oder `netstat -ano \| findstr :8000` (Windows) |
+| kind-Cluster existiert schon | `kind delete cluster --name ai-spaces` und Skript erneut starten |
 
-### Dev mode (skip login entirely)
+### Dev-Modus (Login überspringen)
 
-Edit `.env` and set `AUTH_PROVIDER=dev`, then restart the backend.
-In dev mode every request is treated as admin — no Keycloak needed.
+In `.env` die Zeile `AUTH_PROVIDER=dev` setzen und das Backend neu starten. Im Dev-Modus wird jede Anfrage automatisch als Admin behandelt, Keycloak wird nicht benötigt.

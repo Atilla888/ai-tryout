@@ -1,80 +1,75 @@
 # AI-Spaces
 
-A platform for running AI model jobs through a web UI. Users pick a Space (an AI model), submit inputs, and get results back — text, audio, or 3D models — without writing any code.
+Eine Plattform für das Ausführen von KI-Jobs über eine Web-Oberfläche. Nutzer wählen einen Space (ein KI-Modell), geben ihre Eingaben ein und erhalten Ergebnisse zurück – Texte, Audio oder 3D-Modelle – ohne selbst Code schreiben zu müssen.
 
-Built at Hof University of Applied Sciences, SS 2026.
+Entstanden im Rahmen des interdisziplinären SW-Entwicklungsprojekts an der Hochschule Hof, SS 2026.
 
-## What it does
+## Überblick
 
-- **Space Hub** — browse and submit jobs to published AI Spaces
-- **Job tracking** — live progress updates, artifact download
-- **Creator dashboard** — define and publish new Spaces with custom input forms
-- **Admin dashboard** — manage all Spaces and users
-- **Kubernetes-native** — each job runs as an isolated K8s Job pod
+Nutzer können Spaces durchsuchen und Jobs einreichen. Jeder Job läuft in einem eigenen Kubernetes-Pod und gibt Artefakte zurück, die in der App direkt angezeigt oder heruntergeladen werden können. Space-Ersteller können eigene Spaces mit eigenen Input-Formularen definieren und veröffentlichen. Admins sehen alle Spaces und Nutzer in einem Dashboard.
 
-## Tech stack
+## Technologien
 
-| Layer | Technology |
+| Schicht | Technologie |
 |---|---|
 | Frontend | React 19, TypeScript, Vite |
-| Backend | FastAPI (Python), PostgreSQL, SQLAlchemy |
+| Backend | FastAPI, PostgreSQL, SQLAlchemy |
 | Auth | Keycloak (OIDC / JWT) |
-| Orchestration | Custom Python orchestrator + Kubernetes Jobs |
-| Infrastructure | Kubernetes (kind for local), Docker Compose (local dev) |
+| Orchestrierung | Python-Orchestrator + Kubernetes Jobs |
+| Infrastruktur | Kubernetes (kind lokal), Docker Compose |
 
-## Running locally
+## Lokal starten
 
-Two ways — pick one:
+Es gibt zwei Wege:
 
-**Docker Compose** (fastest, 5 minutes):
+Docker Compose (am einfachsten, ca. 5 Minuten):
 ```bash
 cp .env.example .env
 docker compose up
 ```
-→ See [QUICKSTART.md](QUICKSTART.md) for the full walkthrough.
 
-**Kubernetes with kind** (full stack):
+Kubernetes mit kind (vollständiger Stack):
 ```bash
 bash scripts/setup-kind.sh
 ```
-→ See [QUICKSTART.md](QUICKSTART.md#path-b-kubernetes-with-kind) for details.
 
-## Project structure
+Details dazu in [QUICKSTART.md](QUICKSTART.md).
+
+## Projektstruktur
 
 ```
 apps/
-  backend/        FastAPI backend + Alembic migrations
-  frontend/       React frontend
-  orchestrator/   Job orchestrator (subprocess or K8s backend)
-  sam3d-runner/   SAM 3D Objects runner (image → GLB)
-  acestep-runner/ ACE-Step 1.5 runner (text → music)
+  backend/        FastAPI-Backend + Alembic-Migrationen
+  frontend/       React-Frontend
+  orchestrator/   Job-Orchestrator (subprocess oder K8s)
+  sam3d-runner/   SAM 3D Objects Runner (Bild -> GLB)
+  acestep-runner/ ACE-Step 1.5 Runner (Text -> Musik)
 infra/
-  k8s/            Kubernetes manifests
-  kind/           kind cluster config
+  k8s/            Kubernetes-Manifeste
+  kind/           kind-Cluster-Config
 docs/
-  QUICKSTART_MAC.md   Mac-specific local dev guide
-  test-results.md     Test protocol (unit, load, manual)
+  test-results.md     Testprotokoll (Unit, Last, Manuell)
 scripts/
-  setup-kind.sh   Automated kind cluster setup
+  setup-kind.sh   Automatisches kind-Cluster-Setup
 ```
 
-## Included AI Spaces (mock mode, no GPU needed)
+## Eingebundene KI-Spaces (Mock-Modus, kein GPU nötig)
 
-| Space | Input | Output |
+| Space | Eingabe | Ausgabe |
 |---|---|---|
-| ACE-Step 1.5 — Text to Music | Text prompt | WAV audio |
-| 3D Generator — SAM 3D Objects | Image upload | GLB 3D model |
+| ACE-Step 1.5 – Text to Music | Text-Prompt | WAV-Audiodatei |
+| 3D Generator – SAM 3D Objects | Bild-Upload | GLB-3D-Modell |
 
-## Tests
+## Tests ausführen
 
 ```bash
-# Backend (228 tests, 80% branch coverage)
+# Backend (228 Tests, 80 % Branch-Coverage)
 cd apps/backend
 python -m pytest tests/ --cov=app --cov-branch -q
 
-# Frontend (24 tests)
+# Frontend (24 Tests)
 cd apps/frontend
 npm run test
 ```
 
-Full test results: [docs/test-results.md](docs/test-results.md)
+Vollständige Testergebnisse: [docs/test-results.md](docs/test-results.md)
