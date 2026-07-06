@@ -1,0 +1,4 @@
+httpx==0.28.1
+# ACE-Step 1.5. Pin to the version whose docs/en/INFERENCE.md matches runner.py's
+# imports (acestep.handler / acestep.llm_inference / acestep.inference).
+acestep==1.5.0

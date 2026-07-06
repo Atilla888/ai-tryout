@@ -30,7 +30,7 @@ export interface InputFieldConfig {
   maxLength?: number
   min?: number
   max?: number
-  options?: InputOption[]
+  options?: (string | InputOption)[]
   mime_types?: string[]
   max_size_mb?: number
 }

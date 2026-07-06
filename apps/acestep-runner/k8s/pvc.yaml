@@ -1,0 +1,20 @@
+# One shared volume that holds the ACE-Step model weights, so the weights are
+# downloaded ONCE and then just mounted (read) by every job's runner pod.
+#
+# ReadWriteMany because the download Job writes to it and many runner pods read
+# from it at the same time. Your storage is NFS, which supports ReadWriteMany.
+#
+# EDIT: set storageClassName to your NFS StorageClass name (ask whoever set up
+# the cluster; `kubectl get storageclass` lists them).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: acestep-models        # must match runner_config.weights_pvc in space.json
+  namespace: default          # EDIT if your app runs in another namespace
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs        # EDIT: your NFS StorageClass
+  resources:
+    requests:
+      storage: 20Gi            # ACE-Step 1.5 base weights are a few GB; 20Gi is headroom

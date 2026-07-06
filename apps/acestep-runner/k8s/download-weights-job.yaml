@@ -1,0 +1,35 @@
+# Runs ONCE to download the ACE-Step weights into the shared PVC above.
+# No GPU needed here — this only downloads files. After it reports Completed you
+# never run it again (unless you switch model variants).
+#
+# Uses the same runner image you built, because that image already has the
+# `acestep` package (and therefore its download command) installed.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: acestep-download-weights
+  namespace: default          # EDIT to match the PVC's namespace
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600   # auto-clean the finished Job after 1h
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: download
+          image: REGISTRY/acestep-runner:1.5   # EDIT: same image ref as space.json
+          # ACE-Step's downloader CLI. Confirm the exact command/flags for the
+          # version you pinned (the repo documents `acestep-download`); pass the
+          # variant names that match space.json's ACESTEP_CONFIG_PATH / _LM_MODEL_PATH.
+          command: ["acestep-download"]
+          # args: ["--config", "acestep-v15-base", "--lm", "acestep-5Hz-lm-0.6B"]
+          env:
+            - name: ACESTEP_CHECKPOINT_DIR
+              value: /models
+          volumeMounts:
+            - name: model-weights
+              mountPath: /models
+      volumes:
+        - name: model-weights
+          persistentVolumeClaim:
+            claimName: acestep-models
