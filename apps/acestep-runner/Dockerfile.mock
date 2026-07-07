@@ -1,0 +1,5 @@
+FROM python:3.14-slim
+WORKDIR /app
+RUN pip install --no-cache-dir httpx==0.28.1
+COPY runner.py mock_runner.py ./
+CMD ["python", "mock_runner.py"]

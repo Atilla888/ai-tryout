@@ -33,12 +33,16 @@ class NormalizedClaims:
 
 
 class AuthProvider(ABC):
+    """Pluggable identity backend: turns an Authorization header into NormalizedClaims."""
+
     @abstractmethod
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
+        """Validate the header and return the caller's normalized claims, or raise 401."""
         ...
 
 
 def _bearer_token(authorization: str | None) -> str:
+    """Extract the token from a 'Bearer <token>' header, or raise 401 if malformed."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,11 +53,14 @@ def _bearer_token(authorization: str | None) -> str:
 
 
 class OIDCAuthProvider(AuthProvider):
+    """Production provider that verifies Keycloak-issued OIDC JWTs against its JWKS."""
+
     def __init__(self) -> None:
         # PyJWKClient caches keys and refreshes when Keycloak rotates them.
         self._jwks_client = jwt.PyJWKClient(settings.oidc_jwks_url)
 
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
+        """Verify the JWT signature, issuer and audience, then map its claims."""
         token = _bearer_token(authorization)
         try:
             signing_key = self._jwks_client.get_signing_key_from_jwt(token)
@@ -93,6 +100,7 @@ class DevAuthProvider(AuthProvider):
     """
 
     async def authenticate(self, authorization: str | None) -> NormalizedClaims:
+        """Ignore the header and return fixed admin claims for local development."""
         return NormalizedClaims(
             subject_id="dev-user",
             email="dev@example.com",
@@ -102,6 +110,7 @@ class DevAuthProvider(AuthProvider):
 
 
 def _build_provider() -> AuthProvider:
+    """Select OIDC in production or the dev fallback, warning loudly for the latter."""
     if settings.auth_provider == "oidc":
         return OIDCAuthProvider()
     logger.warning(
@@ -116,6 +125,7 @@ auth_provider: AuthProvider = _build_provider()
 
 
 def map_realm_roles_to_role(realm_roles: list[str]) -> str:
+    """Collapse Keycloak realm roles into our single app role, highest privilege wins."""
     if "admin" in realm_roles:
         return "admin"
     if "space_creator" in realm_roles:
@@ -127,6 +137,7 @@ async def get_current_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     authorization: Annotated[str | None, Header()] = None,
 ) -> User:
+    """FastAPI dependency: authenticate the request and return its users row, creating it on first sight."""
     claims = await auth_provider.authenticate(authorization)
     role = map_realm_roles_to_role(claims.realm_roles)
     return await get_or_create_user_service(
@@ -142,8 +153,10 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def require_role(*allowed_roles: str):
+    """Build a dependency that admits the current user only if their role is allowed."""
 
     async def _checker(user: CurrentUser) -> User:
+        """Return the user if their role is permitted, otherwise raise 403."""
         if user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

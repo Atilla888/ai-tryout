@@ -1,3 +1,5 @@
+"""Filesystem storage helpers for saving, resolving, and deleting job input/output files."""
+
 import shutil
 from pathlib import Path
 from uuid import UUID
@@ -70,8 +72,10 @@ def delete_job_storage(job_id: UUID | int) -> None:
 
 
 async def save_job_input_file(job_id: UUID, file: UploadFile) -> tuple[str, int, str]:
+    """Write an uploaded job input file under input/ and return its path, size, and filename."""
     return await save_job_file(job_id, file, subdir="input")
 
 
 async def save_job_output_file(job_id: UUID, file: UploadFile) -> tuple[str, int, str]:
+    """Write a runner-produced job output file under output/ and return its path, size, and filename."""
     return await save_job_file(job_id, file, subdir="output")

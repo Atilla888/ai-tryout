@@ -1,7 +1,10 @@
+"""Job status state machine and transition validation."""
+
 from app.schemas.jobs import JobStatus
 
 
 class JobTransitionError(ValueError):
+    """Raised when a requested job status change is not allowed."""
     pass
 
 
@@ -19,6 +22,7 @@ _ALLOWED: dict[JobStatus, set[JobStatus]] = {
 
 
 def ensure_transition(current: str, new: JobStatus) -> None:
+    """Validate a status move against the state machine; raises JobTransitionError if disallowed or the current status is unknown."""
     try:
         current_status = JobStatus(current)
     except ValueError as exc:

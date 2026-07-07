@@ -1,3 +1,5 @@
+"""SQLAlchemy ORM models for users, spaces, jobs, and artifacts."""
+
 from datetime import datetime
 from sqlalchemy import ForeignKey, UniqueConstraint, Uuid, Integer, Boolean, String, DateTime, event, func, select
 from app.db.base import Base

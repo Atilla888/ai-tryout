@@ -50,6 +50,7 @@ def _runner_env(job_id: str, execution_data: dict[str, Any], api_base_url: str, 
 
 
 class RunnerBackend(ABC):
+    """Abstract interface a runner backend must implement (start/poll/terminate/cleanup)."""
     name: str = "runner"
 
     @abstractmethod
@@ -79,6 +80,7 @@ class SubprocessRunnerBackend(RunnerBackend):
         self.service_token = service_token
 
     def start(self, job_id: str, execution_data: dict[str, Any]) -> subprocess.Popen[bytes]:
+        """Spawns the runner script as a child process with the runner env injected and returns the Popen handle."""
         env = os.environ.copy()
         env.update(_runner_env(job_id, execution_data, self.api_base_url, self.service_token))
         process = subprocess.Popen(
@@ -90,9 +92,11 @@ class SubprocessRunnerBackend(RunnerBackend):
         return process
 
     def poll(self, handle: subprocess.Popen[bytes]) -> int | None:
+        """Returns the child process exit code, or None while it is still running."""
         return handle.poll()
 
     def terminate(self, handle: subprocess.Popen[bytes]) -> None:
+        """Terminates the child gracefully, force-killing it if it does not exit within the grace period."""
         if handle.poll() is not None:
             return
         handle.terminate()
@@ -117,6 +121,7 @@ class KubernetesRunnerBackend(RunnerBackend):
         job_name_prefix: str = "aispaces-job",
         backoff_limit: int = 0,
         active_deadline_seconds: int | None = None,
+        image_pull_policy: str = "IfNotPresent",
     ) -> None:
         # Imported here so the subprocess backend never needs the kubernetes client.
         from kubernetes import client, config
@@ -134,11 +139,14 @@ class KubernetesRunnerBackend(RunnerBackend):
         self.job_name_prefix = job_name_prefix
         self.backoff_limit = backoff_limit
         self.active_deadline_seconds = active_deadline_seconds
+        self.image_pull_policy = image_pull_policy
 
     def _job_name(self, job_id: str) -> str:
+        """Builds the Kubernetes Job name for a platform job id from the configured prefix."""
         return f"{self.job_name_prefix}-{job_id}"
 
     def start(self, job_id: str, execution_data: dict[str, Any]) -> str:
+        """Creates a one-shot Kubernetes Job from the space's image (with env, GPU, and weights volume config) and returns its name as the handle."""
         runner_image = execution_data.get("runner_image")
         if not runner_image:
             raise ValueError(f"job={job_id} has no runner image in execution data")
@@ -179,6 +187,10 @@ class KubernetesRunnerBackend(RunnerBackend):
         container = self._client.V1Container(
             name="runner",
             image=runner_image,
+            # IfNotPresent so locally-loaded images (e.g. `kind load docker-image`) are used
+            # instead of always pulling from a registry — otherwise a `:latest` tag defaults
+            # to Always and fails on images that only exist in the cluster's local store.
+            image_pull_policy=self.image_pull_policy,
             env=env_vars,
             resources=resources,
             volume_mounts=volume_mounts,
@@ -214,6 +226,7 @@ class KubernetesRunnerBackend(RunnerBackend):
         return self._job_name(job_id)
 
     def poll(self, handle: str) -> int | None:
+        """Reads the Job status, returning 0 on success (or if already deleted), 1 on failure, and None while still running."""
         from kubernetes.client.rest import ApiException
 
         try:
@@ -230,9 +243,11 @@ class KubernetesRunnerBackend(RunnerBackend):
         return None
 
     def terminate(self, handle: str) -> None:
+        """Stops a running worker by deleting its Kubernetes Job (delegates to cleanup)."""
         self.cleanup(handle)
 
     def cleanup(self, handle: str) -> None:
+        """Deletes the Kubernetes Job (and its pods) in the background, ignoring a 404 if it is already gone."""
         from kubernetes.client.rest import ApiException
 
         try:
@@ -262,6 +277,7 @@ def build_runner_backend(
             api_base_url=api_base_url,
             service_token=service_token,
             namespace=namespace,
+            image_pull_policy=os.environ.get("RUNNER_IMAGE_PULL_POLICY", "IfNotPresent"),
         )
     if backend == "subprocess":
         if runner_script is None:

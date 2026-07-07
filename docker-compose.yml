@@ -33,7 +33,27 @@ services:
       - "8080:8080"
     volumes:
       - keycloak_data:/opt/keycloak/data
-      - ./infra/keycloak/ai-spaces-realm.json:/opt/keycloak/data/import/ai-spaces-realm.json:ro
+      - ./infra/k8s/keycloak/ai-spaces-realm.json:/opt/keycloak/data/import/ai-spaces-realm.json:ro
+
+  # One-shot: applies database migrations, then exits. Backend and orchestrator wait for
+  # it to finish so they never query an unmigrated database.
+  migrate:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    image: ai-spaces-backend:dev
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+      ALEMBIC_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aispacesuser}:${POSTGRES_PASSWORD:-aispacespass}@postgres:5432/${POSTGRES_DB:-aispaces}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend:/app
+    restart: "no"
 
   backend:
     build:
@@ -59,6 +79,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       keycloak:
         condition: service_started
     ports:
@@ -66,6 +88,28 @@ services:
     volumes:
       - ./apps/backend:/app
       - storage_data:/app/storage
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: ai-spaces-frontend:dev
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    # Published on 5173 to match the OIDC redirect URI (window.location.origin), which the
+    # Keycloak realm and backend CORS allow.
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
 
   orchestrator:
     build:
@@ -84,7 +128,7 @@ services:
       POLL_INTERVAL_SECONDS: "3"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./apps/orchestrator:/app
 

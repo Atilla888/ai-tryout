@@ -23,11 +23,13 @@ from app.services.storage import delete_job_storage, delete_storage_file
 
 @dataclass
 class CleanupResult:
+    """Counts of what a cleanup pass changed: jobs expired and artifacts removed."""
     jobs_expired: int = 0
     artifacts_removed: int = 0
 
 
 async def cleanup_expired_jobs_and_artifacts(db: AsyncSession) -> CleanupResult:
+    """Mark jobs past retention as EXPIRED, delete their (and any orphaned) artifact files from disk and rows from the DB, and commit."""
     now = datetime.now(timezone.utc)
     result = CleanupResult()
 

@@ -1,3 +1,5 @@
+"""HTTP endpoints for admin management of spaces and users."""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -25,11 +27,13 @@ AdminUser = Annotated[User, Depends(require_role("admin"))]
 
 @router.get("/spaces", response_model=list[SpaceDetail])
 async def admin_list_spaces(db: db_dependency, _: AdminUser):
+    """Every space, no filtering. For admin/internal use only."""
     return await list_spaces_service(db)
 
 
 @router.patch("/spaces/{space_id}", response_model=SpaceDetail)
 async def admin_update_space(space_id: UUID, body: AdminSpaceUpdate, db: db_dependency, _: AdminUser):
+    """Updates any space's fields regardless of ownership; admin only."""
     space = await get_space_by_public_id_service(db=db, public_id=space_id)
     if space is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Space not found")
@@ -57,4 +61,5 @@ async def admin_delete_space(space_id: UUID, db: db_dependency, _: AdminUser):
 
 @router.get("/users", response_model=list[UserRead])
 async def admin_list_users(db: db_dependency, _: AdminUser):
+    """Every registered user; admin only."""
     return await list_users_service(db)

@@ -20,6 +20,42 @@
         "admin",
         "space_creator"
       ]
+    },
+    {
+      "username": "creator",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "creator@example.com",
+      "firstName": "Creator",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "creator123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "space_creator"
+      ]
+    },
+    {
+      "username": "user",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "user@example.com",
+      "firstName": "End",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "end_user"
+      ]
     }
   ],
   "notBefore": 0,
@@ -48,7 +84,7 @@
   "oauth2DevicePollingInterval": 5,
   "enabled": true,
   "sslRequired": "external",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "registrationEmailAsUsername": false,
   "rememberMe": false,
   "verifyEmail": false,

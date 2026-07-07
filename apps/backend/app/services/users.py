@@ -1,3 +1,5 @@
+"""Business logic and DB operations for looking up and provisioning users on login."""
+
 from uuid import UUID
 
 from sqlalchemy import select
@@ -8,6 +10,7 @@ from app.db.models import User
 
 
 async def list_users_service(db: AsyncSession) -> list[User]:
+    """All users, oldest first. For admin use."""
     result = await db.execute(select(User).order_by(User.created_at))
     return list(result.scalars().all())
 

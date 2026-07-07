@@ -1,3 +1,5 @@
+"""Business logic for validating a space's UI and runner configuration."""
+
 import re
 from typing import Any
 
@@ -9,6 +11,7 @@ _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
+    """Check the space's UI input definitions (names, types, options, labels) and return any field errors."""
     errors: list[FieldError] = []
 
     inputs = ui_config.get("inputs")
@@ -81,6 +84,7 @@ def _validate_ui_config(ui_config: dict[str, Any]) -> list[FieldError]:
 
 
 def _validate_runner_config(runner_config: dict[str, Any], container_image: str) -> list[FieldError]:
+    """Check the container image and runner limits (timeout, memory) are present and within bounds; return any field errors."""
     errors: list[FieldError] = []
 
     if not container_image or not container_image.strip():
@@ -117,6 +121,7 @@ def _validate_runner_config(runner_config: dict[str, Any], container_image: str)
 
 
 def validate_space_config(space: Space) -> ValidationResult:
+    """Run all UI and runner config checks on a space; the result is valid only when no field errors were found."""
     errors: list[FieldError] = []
     errors.extend(_validate_ui_config(space.ui_config or {}))
     errors.extend(_validate_runner_config(space.runner_config or {}, space.container_image or ""))

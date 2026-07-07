@@ -1,3 +1,5 @@
+"""Pydantic request/response schemas for creating, updating, and reading spaces."""
+
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -8,6 +10,7 @@ from app.schemas.common import OrmBase
 
 
 class SpaceListItem(OrmBase):
+    """One space as it appears in a catalog list — public fields only, no config."""
     id: UUID = Field(validation_alias="public_id")
     public_id: UUID
     name: str
@@ -24,6 +27,7 @@ class SpaceListItem(OrmBase):
 
 
 class SpaceDetail(OrmBase):
+    """Full public view of a single space, including UI and runner config."""
     id: UUID = Field(validation_alias="public_id")
     name: str
     slug: str
@@ -59,6 +63,7 @@ class SpaceCreate(BaseModel):
 
 
 class SpaceUpdate(BaseModel):
+    """Fields a creator may update on their own space — all optional for partial updates."""
     name: str | None = None
     description: str | None = None
     task_type: str | None = None
@@ -72,12 +77,14 @@ class SpaceUpdate(BaseModel):
 
 
 class AdminSpaceUpdate(SpaceUpdate):
+    """Admin-only space update — adds reassigning ownership on top of SpaceUpdate."""
     # Reassign ownership by the target user's public UUID (resolved to the
     # internal row id in the router).
     owner_id: UUID | None = None
 
 
 class SpaceRead(BaseModel):
+    """Full space returned to its owner or an admin, including the creator's public id/number."""
     id: UUID = Field(validation_alias="public_id")
     created_at: datetime
     slug: str
