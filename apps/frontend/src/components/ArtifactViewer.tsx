@@ -1,7 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Artifact } from '../api/api'
 import { artifactDownloadUrl, artifactPreviewUrl } from '../api/api'
 import './ArtifactViewer.css'
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        src?: string
+        alt?: string
+        'camera-controls'?: boolean | string
+        'auto-rotate'?: boolean | string
+        'shadow-intensity'?: string
+        ar?: boolean | string
+      }
+    }
+  }
+}
 
 interface ArtifactViewerProps {
   artifact: Artifact
@@ -17,6 +32,24 @@ function formatExpirationDate(expiresAt: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function ModelViewer3D({ src, alt }: { src: string; alt: string }) {
+  useEffect(() => {
+    import('@google/model-viewer')
+  }, [])
+
+  return (
+    <div className="artifact-preview artifact-3d-preview">
+      <model-viewer
+        src={src}
+        alt={alt}
+        camera-controls
+        auto-rotate
+        shadow-intensity="1"
+      />
+    </div>
+  )
 }
 
 function renderPreview(artifact: Artifact) {
@@ -39,6 +72,21 @@ function renderPreview(artifact: Artifact) {
         </audio>
       </div>
     )
+  }
+
+  if (artifact.artifact_type === 'output_video') {
+    return (
+      <div className="artifact-preview artifact-video-preview">
+        <video controls>
+          <source src={previewUrl} type={artifact.content_type} />
+          Your browser does not support the video element.
+        </video>
+      </div>
+    )
+  }
+
+  if (artifact.artifact_type === '3d') {
+    return <ModelViewer3D src={previewUrl} alt={artifact.file_name} />
   }
 
   if (artifact.artifact_type === 'output_text') {
