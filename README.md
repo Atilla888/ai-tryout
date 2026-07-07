@@ -22,8 +22,8 @@ Users can browse Spaces and submit jobs. Each job runs in its own Kubernetes pod
 
 Two ways to run it locally, both covered step by step in [QUICKSTART.md](QUICKSTART.md):
 
-1. **Docker Compose** (fastest, everything in containers).
-2. **Kubernetes with kind** (the full stack with Keycloak login and both Spaces).
+1. Docker Compose (fastest, everything in containers).
+2. Kubernetes with kind (the full stack with Keycloak login and both Spaces).
 
 The quickest start is Docker Compose:
 

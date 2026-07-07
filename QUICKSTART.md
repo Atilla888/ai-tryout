@@ -70,10 +70,10 @@ docker compose down          # add -v to also wipe the database and stored files
 Full stack on a local Kubernetes cluster: Postgres, Keycloak login, NFS artifact storage, the real orchestrator, and both AI Spaces (ACE-Step music and SAM 3D) running in CPU mock mode, so no GPU is needed.
 
 Requirements: Docker Desktop, `kubectl`, and `kind`.
-- **Mac/Linux:** the setup script installs `kind` for you (Homebrew or binary download). It also uses `python3` (already on macOS) to read tokens.
-- **Windows:** install `kind` and `kubectl` yourself first, e.g. `winget install Kubernetes.kind Kubernetes.kubectl`.
+- Mac/Linux: the setup script installs `kind` for you (Homebrew or binary download). It also uses `python3` (already on macOS) to read tokens.
+- Windows: install `kind` and `kubectl` yourself first, e.g. `winget install Kubernetes.kind Kubernetes.kubectl`.
 
-The scripts live in `scripts/mac-linux/` and `scripts/windows/`, with the same three per OS: **`up`** (bring the stack up), **`seed`** (register the two Spaces), **`down`** (tear down). `up` does:
+The scripts live in `scripts/mac-linux/` and `scripts/windows/`, with the same three per OS: `up` (bring the stack up), `seed` (register the two Spaces), `down` (tear down). `up` does:
 
 1. Create a kind cluster named `ai-spaces`
 2. Start an NFS server for artifact storage on the cluster's docker network
@@ -102,16 +102,16 @@ kubectl port-forward svc/frontend 5173:80   -n ai-spaces
 ./scripts/windows/seed.ps1       # register the two Spaces
 ```
 
-Then open http://localhost:5173 and log in as **admin / admin123**.
+Then open http://localhost:5173 and log in as admin / admin123.
 
-> One platform difference: on Mac/Linux `up.sh` starts the port-forwards for you; on Windows `up.ps1` prints the two commands to run (Windows background forwards are less reliable). `seed` also spins up a temporary forward if it can't reach them.
+On Mac/Linux `up.sh` starts the port-forwards automatically. On Windows `up.ps1` prints the two kubectl commands to run in separate terminals (Windows background forwards are less reliable). `seed` also spins up a temporary forward if it cannot reach the API.
 
-> **Windows/WSL note:** `up.ps1` pins `kindest/node:v1.34.0` because kind's default (v1.35.0) fails to boot on newer WSL2 kernels ("could not find a log line ... Reached target Multi-User System"). If cluster creation fails, run `wsl --shutdown`, restart Docker Desktop, and re-run.
+Windows/WSL note: `up.ps1` pins `kindest/node:v1.34.0` because kind's default (v1.35.0) fails to boot on newer WSL2 kernels. If cluster creation fails, run `wsl --shutdown`, restart Docker Desktop, and re-run the script.
 
 ### Using the app
 
-- **Run a job:** open **SAM 3D**, upload a photo, and submit to get back a `.glb`. Or open **ACE-Step**, enter a prompt, and get back a `.wav`. Each job runs as a Kubernetes Job, which you can watch with `kubectl get jobs -n ai-spaces -w`.
-- **Create your own Space:** go to the Creator dashboard, open My Spaces, and click New Space. Set the container image to a loaded runner (`ai-spaces-sam3d:latest` or `ai-spaces-acestep:latest`), define the input form, then Validate and Publish.
+- Run a job: open SAM 3D, upload a photo, and submit to get back a `.glb`. Or open ACE-Step, enter a prompt, and get back a `.wav`. Each job runs as a Kubernetes Job, which you can watch with `kubectl get jobs -n ai-spaces -w`.
+- Create your own Space: go to the Creator dashboard, open My Spaces, and click New Space. Set the container image to a loaded runner (`ai-spaces-sam3d:latest` or `ai-spaces-acestep:latest`), define the input form, then Validate and Publish.
 
 ### Restore port-forwards after a restart
 
