@@ -29,7 +29,7 @@ The quickest start is Docker Compose:
 
 ```bash
 cp .env.example .env
-docker compose up
+docker compose up -d --build
 ```
 
 Then open http://localhost:5173 and log in with username `admin` and password `admin123`. For the kind option, prerequisites, and the full walkthrough, see [QUICKSTART.md](QUICKSTART.md).

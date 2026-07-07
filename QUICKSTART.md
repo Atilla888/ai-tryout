@@ -8,9 +8,7 @@ Docker Compose is the simpler option and takes about 5 minutes. Kubernetes with 
 
 ## Option A: Docker Compose
 
-Everything runs in Docker, no need to start services manually.
-
-Requirements: Docker Desktop, Python 3.12+, Node 20+
+Everything runs in Docker. The only tool you need is Docker Desktop. Python and Node are only needed if you want to run the tests locally.
 
 ### Steps
 
@@ -22,64 +20,13 @@ cd ai-spaces
 cp .env.example .env
 ```
 
-2. Install Python dependencies
-
-Mac / Linux:
-```bash
-python3 -m venv venv
-venv/bin/pip install -r apps/backend/requirements.txt
-venv/bin/pip install -r apps/orchestrator/requirements.txt
-```
-
-Windows (PowerShell):
-```powershell
-python -m venv venv
-venv\Scripts\pip install -r apps\backend\requirements.txt
-venv\Scripts\pip install -r apps\orchestrator\requirements.txt
-```
-
-3. Install frontend dependencies
+2. Start everything
 
 ```bash
-cd apps/frontend
-npm install
-cd ../..
+docker compose up -d --build
 ```
 
-4. Start all services
-
-```bash
-docker compose up
-```
-
-This starts Postgres, Keycloak, the backend and the orchestrator together. After about 30 seconds Keycloak is ready. Then open a second terminal for the frontend:
-
-```bash
-cd apps/frontend
-npm run dev
-```
-
-5. Open the app at http://localhost:5173
-
-The backend runs with `AUTH_PROVIDER=oidc`, and the realm import already ships ready-to-use accounts, so no user setup is needed.
-
-6. Log in
-
-Log in with username `admin` and password `admin123`. This account has the `admin` and `space_creator` roles. Two more accounts are seeded for testing: `creator` / `creator123` (can create Spaces) and `user` / `user123` (a normal end user). You can also register a brand new account from the login page.
-
-Prefer no login at all? Set `AUTH_PROVIDER=dev` in `.env` and restart the backend, and every request is then treated as admin without needing Keycloak.
-
-7. Run database migrations
-
-```bash
-# Mac / Linux
-cd apps/backend
-../../venv/bin/alembic upgrade head
-
-# Windows
-cd apps\backend
-..\..\venv\Scripts\alembic upgrade head
-```
+This builds and starts Postgres, Keycloak, the backend, the orchestrator, and the frontend together, and applies the database migrations automatically. Give it about 30 seconds for Keycloak to finish importing the realm. To watch the logs, run `docker compose logs -f`.
 
 Quick check:
 ```bash
@@ -87,10 +34,33 @@ curl http://localhost:8000/health
 # expected: {"status":"ok"}
 ```
 
+3. Open the app at http://localhost:5173 and log in
+
+The backend runs with `AUTH_PROVIDER=oidc`, and the realm import already ships ready-to-use accounts, so no user setup is needed:
+
+| Username | Password | Role |
+|---|---|---|
+| `admin` | `admin123` | admin and space_creator |
+| `creator` | `creator123` | can create Spaces |
+| `user` | `user123` | a normal end user |
+
+You can also register a brand new account from the login page.
+
+4. Add the demo Spaces (optional)
+
+A fresh database has no Spaces yet. Either create one from the Creator dashboard in the UI, or register the two demo Spaces with the seed script (it also works against Docker Compose, since it just calls the running API):
+
+```bash
+bash scripts/mac-linux/seed.sh        # Windows: ./scripts/windows/seed.ps1
+```
+
+Note: in Docker Compose the orchestrator uses the bundled fake runner, so a submitted job returns dummy output. The real CPU mock runners (a demo cube and a sine-wave WAV) run under kind in Option B.
+
+Prefer no login at all? Set `AUTH_PROVIDER=dev` in `.env`, then run `docker compose up -d` again. Every request is then treated as admin without needing Keycloak.
+
 To stop:
 ```bash
-docker compose down
-# in the frontend terminal: Ctrl+C
+docker compose down          # add -v to also wipe the database and stored files
 ```
 
 ---
@@ -169,7 +139,7 @@ bash scripts/mac-linux/down.sh
 | Problem | Solution |
 |---|---|
 | `docker: command not found` | Docker Desktop is not running |
-| Backend cannot reach Postgres | Change `localhost` to `127.0.0.1` in `DATABASE_URL` in `.env` |
+| Backend won't start, or `up` reports a failed dependency | The automatic migration step failed. Check `docker compose logs migrate` |
 | Login redirect loop | Keycloak is not ready yet, wait 30 seconds and try again |
 | Job is submitted but nothing happens | Orchestrator is not running (Option A: it is included in `docker compose up`) |
 | Port already in use | `lsof -i :8000` (Mac/Linux) or `netstat -ano \| findstr :8000` (Windows) |
@@ -179,4 +149,4 @@ bash scripts/mac-linux/down.sh
 
 ### Dev mode (skip login)
 
-Set `AUTH_PROVIDER=dev` in `.env` and restart the backend. In dev mode every request is treated as admin, Keycloak is not needed.
+Set `AUTH_PROVIDER=dev` in `.env`, then run `docker compose up -d` again. In dev mode every request is treated as admin, so Keycloak is not needed.
