@@ -23,6 +23,7 @@ This document lists the contributions of each team member in the AI-Spaces proje
 | — | Interactive 3D viewer in the frontend using @google/model-viewer |
 | — | Test results documentation (228 backend, 24 frontend, 2 load, 15 manual, 1 integration test) |
 | — | Project documentation: README.md, QUICKSTART.md, docs/implementation-guide.md |
+| — | Backend refactoring and code quality improvements |
 
 ---
 
