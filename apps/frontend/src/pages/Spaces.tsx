@@ -165,6 +165,9 @@ function Spaces() {
         <div className="space-header">
           <div className="space-heading">{space.name}</div>
           <div className="space-owner">{space.task_type.toLowerCase()} generation</div>
+          {space.owner_number != null && (
+            <div className="space-subtle">Created by User #{space.owner_number}</div>
+          )}
           {space.description && <div className="space-subtle">{space.description}</div>}
           <div className="space-meta">
             <span className="meta-pill">{space.task_type}</span>

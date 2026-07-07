@@ -17,6 +17,7 @@ export interface CreatorSpace {
   input_types: string[]
   output_types: string[]
   owner_id: string
+  owner_number: number
   container_image: string
   ui_config: { inputs: CreatorInputDef[] }
   runner_config: Record<string, unknown>

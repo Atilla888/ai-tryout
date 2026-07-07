@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class UserRead(BaseModel):
     """Profile for GET /me. The id field is the public UUID, not the database row id."""
     id: UUID = Field(validation_alias="public_id")
+    user_number: int
     subject_id: str
     idp: str
     email: str

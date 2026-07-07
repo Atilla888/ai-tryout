@@ -3,21 +3,6 @@ import type { Artifact } from '../api/api'
 import { artifactDownloadUrl, artifactPreviewUrl } from '../api/api'
 import './ArtifactViewer.css'
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        src?: string
-        alt?: string
-        'camera-controls'?: boolean | string
-        'auto-rotate'?: boolean | string
-        'shadow-intensity'?: string
-        ar?: boolean | string
-      }
-    }
-  }
-}
-
 interface ArtifactViewerProps {
   artifact: Artifact
 }

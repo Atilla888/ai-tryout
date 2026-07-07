@@ -95,6 +95,13 @@
   font-weight: 700;
 }
 
+.sara-user-id {
+  color: #6e7280;
+  font-weight: 500;
+  font-family: monospace;
+  margin-left: 4px;
+}
+
 /* Sign-in call to action --------------------------------------------- */
 .sara-cta {
   display: inline-flex;

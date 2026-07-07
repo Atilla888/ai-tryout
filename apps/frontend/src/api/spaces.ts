@@ -37,6 +37,7 @@ export interface InputFieldConfig {
 
 export interface SpaceDetail extends Space {
   owner_id: string | null
+  owner_number: number | null
   container_image: string | null
   resource_requirements: Record<string, unknown>
   ui_config: { inputs: InputFieldConfig[] }

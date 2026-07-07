@@ -179,6 +179,7 @@ function JobDetail() {
       )}
 
       <p className="small-text">Job id: {job.id}</p>
+      <p className="small-text">Submitted by: User #{job.user_number}</p>
 
       {job.status === 'SUCCEEDED' && (
         <div className="results">

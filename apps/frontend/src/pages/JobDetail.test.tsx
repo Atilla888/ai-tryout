@@ -25,6 +25,7 @@ function baseJob(overrides: Partial<Job> = {}): Job {
     space_id: 'space-1',
     space_name: 'Image Magic',
     user_id: 'user-1',
+    user_number: 1,
     status: 'QUEUED',
     queue_position: null,
     progress_percent: 0,

@@ -31,6 +31,7 @@ const draftSpace: CreatorSpace = {
   input_types: [],
   output_types: [],
   owner_id: 'owner-1',
+  owner_number: 1,
   container_image: 'img:latest',
   ui_config: { inputs: [] },
   runner_config: {},

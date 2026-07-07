@@ -25,6 +25,7 @@ def job_to_read(job: Job) -> JobRead:
         space_id=job.space.public_id,
         space_name=job.space.name if job.space else None,
         user_id=job.user.public_id,
+        user_number=job.user.user_number,
     )
 
 

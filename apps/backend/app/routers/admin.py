@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.auth import require_role
 from app.db.models import User
-from app.schemas.spaces import AdminSpaceUpdate, SpaceDetail
+from app.schemas.spaces import AdminSpaceUpdate, SpaceDetail, SpaceUpdate
 from app.schemas.users import UserRead
 from app.services.spaces import (
     delete_space_service,
@@ -17,7 +17,7 @@ from app.services.spaces import (
     list_spaces_service,
     update_space_service,
 )
-from app.services.users import list_users_service
+from app.services.users import get_user_by_public_id_service, list_users_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -37,7 +37,17 @@ async def admin_update_space(space_id: UUID, body: AdminSpaceUpdate, db: db_depe
     space = await get_space_by_public_id_service(db=db, public_id=space_id)
     if space is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Space not found")
-    return await update_space_service(db=db, space=space, data=body)
+
+    # Reassign ownership by the target user's public UUID → internal row id.
+    if body.owner_id is not None:
+        new_owner = await get_user_by_public_id_service(db=db, public_id=body.owner_id)
+        if new_owner is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Owner not found")
+        space.owner_id = new_owner.id
+
+    # Apply the remaining fields (owner_id is handled above, not a plain column set).
+    other_fields = SpaceUpdate(**body.model_dump(exclude_unset=True, exclude={"owner_id"}))
+    return await update_space_service(db=db, space=space, data=other_fields)
 
 
 @router.delete("/spaces/{space_id}", status_code=status.HTTP_204_NO_CONTENT)

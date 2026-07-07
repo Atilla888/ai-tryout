@@ -70,10 +70,10 @@ function SpaceEditForm({ space, users, onSave, onClose }: EditFormProps) {
       </div>
       <div className="adm-edit-row">
         <label className="adm-edit-label">Owner</label>
-        <select className="adm-select" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+        <select className="adm-select" value={ownerId ?? ''} onChange={(e) => setOwnerId(e.target.value)}>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.display_name ?? u.email} ({u.role})
+              #{u.user_number} · {u.display_name ?? u.email} ({u.role})
             </option>
           ))}
         </select>
@@ -128,12 +128,11 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
     onSpaceUpdated(updated)
   }
 
-  const ownerLabel = (id: string) => {
-    // owner_id may arrive as an integer (internal id) rather than a user UUID,
-    // so coerce before any string ops and fall back to a readable "#<id>".
-    const key = String(id)
-    const u = users.find((u) => u.id === key)
-    return u ? (u.display_name ?? u.email) : `#${key}`
+  // owner_id is the creator's public UUID; resolve it to a readable name from
+  // the loaded users list. The creator's running number comes from owner_number.
+  const ownerName = (space: CreatorSpace) => {
+    const u = users.find((u) => u.id === space.owner_id)
+    return u ? (u.display_name ?? u.email) : 'Unknown user'
   }
 
   return (
@@ -166,7 +165,9 @@ function SpacesTab({ spaces, users, onSpaceUpdated, onSpaceDeleted }: SpacesTabP
                     <div className="adm-space-name">{space.name}</div>
                     <div className="adm-space-slug">/{space.slug}</div>
                   </td>
-                  <td className="adm-cell-secondary">{ownerLabel(space.owner_id)}</td>
+                  <td className="adm-cell-secondary">
+                    <span className="adm-id-chip">#{space.owner_number}</span> {ownerName(space)}
+                  </td>
                   <td><StatusBadge status={space.status} /></td>
                   <td><VisBadge visibility={space.visibility} /></td>
                   <td className="adm-cell-secondary">{space.task_type}</td>
@@ -254,6 +255,7 @@ function UsersTab({ users }: { users: AdminUser[] }) {
         <table className="adm-table">
           <thead>
             <tr>
+              <th>ID</th>
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
@@ -264,6 +266,7 @@ function UsersTab({ users }: { users: AdminUser[] }) {
           <tbody>
             {filtered.map((u) => (
               <tr key={u.id}>
+                <td><span className="adm-id-chip">#{u.user_number}</span></td>
                 <td className="adm-user-name">{u.display_name ?? '—'}</td>
                 <td className="adm-cell-secondary">{u.email}</td>
                 <td><RoleBadge role={u.role} /></td>
@@ -273,7 +276,7 @@ function UsersTab({ users }: { users: AdminUser[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="adm-empty-cell">No users match your search.</td>
+                <td colSpan={6} className="adm-empty-cell">No users match your search.</td>
               </tr>
             )}
           </tbody>
