@@ -18,6 +18,9 @@ class SpaceListItem(OrmBase):
     output_types: list[str]
     status: str
     visibility: str
+    # Creator identity: the owner's public UUID and short running number.
+    owner_id: UUID = Field(validation_alias="owner_public_id")
+    owner_number: int
 
 
 class SpaceDetail(OrmBase):
@@ -28,7 +31,10 @@ class SpaceDetail(OrmBase):
     task_type: str
     input_types: list[str]
     output_types: list[str]
-    owner_id: int
+    # Creator identity: the owner's public UUID and short running number
+    # (owner_id was previously the internal integer row id — now the public UUID).
+    owner_id: UUID = Field(validation_alias="owner_public_id")
+    owner_number: int
     container_image: str
     ui_config: dict[str, Any]
     runner_config: dict[str, Any]
@@ -66,7 +72,9 @@ class SpaceUpdate(BaseModel):
 
 
 class AdminSpaceUpdate(SpaceUpdate):
-    owner_id: int | None = None
+    # Reassign ownership by the target user's public UUID (resolved to the
+    # internal row id in the router).
+    owner_id: UUID | None = None
 
 
 class SpaceRead(BaseModel):
@@ -83,6 +91,8 @@ class SpaceRead(BaseModel):
     runner_config: dict[str, Any]
     visibility: str
     status: str
-    owner_id: int
+    # Creator identity: the owner's public UUID and short running number.
+    owner_id: UUID = Field(validation_alias="owner_public_id")
+    owner_number: int
 
     model_config = ConfigDict(from_attributes=True)

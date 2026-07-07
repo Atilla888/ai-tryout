@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +10,12 @@ from app.db.models import User
 async def list_users_service(db: AsyncSession) -> list[User]:
     result = await db.execute(select(User).order_by(User.created_at))
     return list(result.scalars().all())
+
+
+async def get_user_by_public_id_service(db: AsyncSession, public_id: UUID) -> User | None:
+    """Look up a user by their public UUID. Used to resolve owner reassignments."""
+    result = await db.execute(select(User).where(User.public_id == public_id))
+    return result.scalar_one_or_none()
 
 
 async def get_user_by_subject_service(

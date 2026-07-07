@@ -55,6 +55,7 @@ class JobRead(BaseModel):
     space_id: UUID
     space_name: str | None = None
     user_id: UUID
+    user_number: int
 
 
 class JobCreate(BaseModel):
