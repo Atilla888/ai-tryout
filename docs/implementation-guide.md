@@ -1,4 +1,4 @@
-# Implementation Guide — AI-Spaces
+# AI-Spaces Implementation Guide
 
 This document explains the technologies used in the project, why they are needed, how the project is structured, and how all the pieces connect.
 
@@ -10,7 +10,7 @@ You need four things installed on your computer. Everything else runs inside Doc
 
 ### 1.1 Git
 
-Version control — tracks every change and lets the team work on the same code without overwriting each other's work.
+Version control that tracks every change and lets the team work on the same code without overwriting each other's work.
 
 Download: https://git-scm.com/downloads
 
@@ -56,55 +56,57 @@ python --version
 
 ## 2. Technologies Used and Why
 
-### 2.1 Frontend — React + Vite (TypeScript)
+### 2.1 Frontend: React + Vite (TypeScript)
 
 | Component | Purpose |
 |---|---|
 | React | JavaScript library for building the UI from reusable components |
 | Vite | Build tool with fast hot reload during development |
-| TypeScript | Typed JavaScript — catches errors before runtime, better editor support |
+| TypeScript | Typed JavaScript that catches errors before runtime, with better editor support |
 
 During development the frontend runs on your machine via `npm run dev` (port 5173). In production it is built into static files and served by Nginx inside a Docker container.
 
-### 2.2 Backend — FastAPI (Python)
+### 2.2 Backend: FastAPI (Python)
 
 | Component | Purpose |
 |---|---|
 | FastAPI | Python web framework for the REST API; generates Swagger docs automatically at `/docs` |
 | Uvicorn | ASGI server that runs FastAPI |
-| SQLAlchemy | ORM — interact with PostgreSQL using Python objects instead of raw SQL |
-| Alembic | Database migration tool — applies schema changes without losing data |
+| SQLAlchemy | ORM that lets you interact with PostgreSQL using Python objects instead of raw SQL |
+| Alembic | Database migration tool that applies schema changes without losing data |
 
 During development the backend runs locally via `uvicorn app.main:app --reload` (port 8000). In production it runs inside a Docker container.
 
-### 2.3 Database — PostgreSQL
+### 2.3 Database: PostgreSQL
 
-Stores all application state: spaces, jobs, users, and artifact metadata. The backend accesses it via SQLAlchemy. PostgreSQL always runs inside a Docker container — you never install it on your machine directly.
+Stores all application state: spaces, jobs, users, and artifact metadata. The backend accesses it via SQLAlchemy. PostgreSQL always runs inside a Docker container, so you never install it on your machine directly.
 
 Main tables:
 
-- `spaces` — one row per registered AI Space (name, container image, input/output types, status)
-- `jobs` — one row per submitted job (status, progress, artifact paths, timestamps)
-- `users` — one row per logged-in user (created automatically on first login)
-- `artifacts` — one row per output file produced by a job
+- `spaces`: one row per registered AI Space (name, container image, input and output types, status)
+- `jobs`: one row per submitted job (status, progress, artifact paths, timestamps)
+- `users`: one row per logged-in user (created automatically on first login)
+- `artifacts`: one row per output file produced by a job
 
-### 2.4 Auth — Keycloak
+### 2.4 Auth: Keycloak
 
-Keycloak is an open-source identity provider. Users log in through Keycloak (OIDC / Authorization Code + PKCE flow). The browser receives a JWT token and sends it with every API request. The backend validates the token signature against Keycloak's public keys.
+Keycloak is an open-source identity provider. Users log in through Keycloak using the OIDC Authorization Code flow with PKCE. The browser receives a JWT token and sends it with every API request. The backend validates the token signature against Keycloak's public keys.
 
 Three roles are defined in the `ai-spaces` realm:
 
-- `end_user` — can browse spaces and submit jobs
-- `space_creator` — can also create and publish spaces
-- `admin` — full access including user management
+- `end_user`: can browse spaces and submit jobs
+- `space_creator`: can also create and publish spaces
+- `admin`: full access including user management
+
+The realm import seeds three test accounts for logging in: `admin` (password `admin123`), `creator` (password `creator123`), and `user` (password `user123`). New users can also self-register from the login page.
 
 ### 2.5 Orchestrator
 
-A separate Python service that polls the backend for queued jobs and starts a Kubernetes Job for each one. The runner container (e.g. `ai-spaces-acestep-mock:dev`) fetches its input from the backend, processes it, uploads the result, and then marks the job as succeeded or failed.
+A separate Python service that polls the backend for queued jobs and starts a Kubernetes Job for each one. The runner container (e.g. `ai-spaces-acestep:latest`) fetches its input from the backend, processes it, uploads the result, and then marks the job as succeeded or failed.
 
 ### 2.6 Kubernetes / kind
 
-Each AI job runs as an isolated Kubernetes Job pod. For local development we use kind (Kubernetes in Docker), which creates a full cluster inside Docker Desktop. The automated setup script (`scripts/setup-kind.sh`) handles the entire local cluster setup.
+Each AI job runs as an isolated Kubernetes Job pod. For local development we use kind (Kubernetes in Docker), which creates a full cluster inside Docker Desktop. The automated setup scripts (`scripts/mac-linux/` and `scripts/windows/`, each with `up` / `seed` / `down`) handle the entire local cluster setup.
 
 ---
 
@@ -124,7 +126,8 @@ docs/
   implementation-guide.md   This file
   test-results.md           Test report
 scripts/
-  setup-kind.sh   Automated kind cluster setup
+  mac-linux/      up.sh / seed.sh / down.sh
+  windows/        up.ps1 / seed.ps1 / down.ps1
 docker-compose.yml
 .env.example
 ```
@@ -220,8 +223,8 @@ npm run test
 cd apps/backend
 alembic upgrade head
 
-# Full kind cluster setup (automated)
-bash scripts/setup-kind.sh
+# Full kind cluster setup on Mac/Linux (Windows: use ./scripts/windows/up.ps1 then seed.ps1)
+bash scripts/mac-linux/up.sh && bash scripts/mac-linux/seed.sh
 
 # Check running pods in kind
 kubectl get pods -n ai-spaces

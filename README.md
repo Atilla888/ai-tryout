@@ -1,6 +1,6 @@
 # AI-Spaces
 
-A platform for running AI model jobs through a web interface. Users pick a Space (an AI model), fill in their inputs, and get results back — text, audio, or 3D models — without writing any code.
+A platform for running AI model jobs through a web interface. Users pick a Space (an AI model), fill in their inputs, and get results back (text, audio, or 3D models) without writing any code.
 
 Created as part of the interdisciplinary software engineering project at Hof University of Applied Sciences, SS 2026.
 
@@ -30,10 +30,12 @@ docker compose up
 
 Kubernetes with kind (full stack):
 ```bash
-bash scripts/setup-kind.sh
+# Mac/Linux
+bash scripts/mac-linux/up.sh && bash scripts/mac-linux/seed.sh
+# Windows: ./scripts/windows/up.ps1 then ./scripts/windows/seed.ps1
 ```
 
-See [QUICKSTART.md](QUICKSTART.md) for details.
+See Option B in [QUICKSTART.md](QUICKSTART.md) for details.
 
 ## Project structure
 
@@ -50,15 +52,16 @@ infra/
 docs/
   test-results.md     Test report (unit, load, manual)
 scripts/
-  setup-kind.sh   Automated kind cluster setup
+  mac-linux/      up.sh, seed.sh, down.sh
+  windows/        up.ps1, seed.ps1, down.ps1
 ```
 
 ## Included AI Spaces (mock mode, no GPU required)
 
 | Space | Input | Output |
 |---|---|---|
-| ACE-Step 1.5 – Text to Music | Text prompt | WAV audio file |
-| 3D Generator – SAM 3D Objects | Image upload | GLB 3D model |
+| ACE-Step 1.5 (Text to Music) | Text prompt | WAV audio file |
+| 3D Generator (SAM 3D Objects) | Image upload | GLB 3D model |
 
 ## Running the tests
 
