@@ -1,3 +1,5 @@
+"""HTTP endpoints for the public space catalog and creating spaces."""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -18,6 +20,7 @@ CreatorUser = Annotated[User, Depends(require_role("space_creator", "admin"))]
 
 @router.post("", response_model=SpaceRead, status_code=status.HTTP_201_CREATED)
 async def create_space(db: db_dependency, data: SpaceCreate, creator: CreatorUser):
+    """Creates a new space owned by the calling creator."""
     try:
         return await create_space_service(db=db, data=data, owner_id=creator.id)
     except IntegrityError:
@@ -36,6 +39,7 @@ async def get_spaces(db: db_dependency):
 
 @router.get("/{space_id}", response_model=SpaceRead, status_code=status.HTTP_200_OK)
 async def get_space_by_id(db: db_dependency, space_id: UUID):
+    """Returns a single space by its public id, or 404 if not found."""
     space = await get_space_by_public_id_service(db=db, public_id=space_id)
     if space is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Space not found by this id")

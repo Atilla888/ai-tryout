@@ -1,3 +1,5 @@
+"""Business logic and DB queries for reading artifacts and resolving their files on disk."""
+
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
@@ -12,6 +14,7 @@ from app.services.storage import resolve_storage_path
 async def get_artifact_by_public_id_service(
     db: AsyncSession, public_id: UUID
 ) -> Artifact | None:
+    """Fetch an artifact by its public UUID. None if not found."""
     result = await db.execute(
         select(Artifact)
         .where(Artifact.public_id == public_id)
@@ -22,6 +25,7 @@ async def get_artifact_by_public_id_service(
 async def get_artifact_by_id_service(
     db: AsyncSession, artifact_id: int
 ) -> Artifact | None:
+    """Fetch an artifact by its internal primary key. None if not found."""
     result = await db.execute(select(Artifact).where(Artifact.id == artifact_id))
     return result.scalar_one_or_none()
 
@@ -29,6 +33,7 @@ async def get_artifact_by_id_service(
 async def list_artifacts_by_job_id_service(
     db: AsyncSession, job_id: int
 ) -> list[Artifact]:
+    """All artifacts for a job (inputs and outputs), oldest first."""
     result = await db.execute(
         select(Artifact)
         .where(Artifact.job_id == job_id)
@@ -50,6 +55,7 @@ async def list_input_artifacts_by_job_id_service(
 
 
 def artifact_absolute_path(artifact: Artifact) -> Path:
+    """Resolve the artifact's stored relative path to an absolute filesystem path."""
     return resolve_storage_path(artifact.storage_path)
 
 

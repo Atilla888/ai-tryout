@@ -1,3 +1,5 @@
+"""SQLAlchemy declarative base with a shared constraint naming convention."""
+
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData
 

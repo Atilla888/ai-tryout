@@ -1,3 +1,5 @@
+"""Service-token-protected HTTP endpoints the orchestrator and runners use to drive jobs."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -45,6 +47,7 @@ db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 
 def _job_or_404(job):
+    """Returns the job or raises 404 if it is missing."""
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return job
@@ -61,6 +64,7 @@ async def list_internal_jobs(
 
 @router.get("/jobs/{job_id}", response_model=InternalJobRead)
 async def get_internal_job(db: db_dependency, job_id: int):
+    """Returns a single job by its internal integer id for the orchestrator."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     return job
 
@@ -134,6 +138,7 @@ async def get_internal_artifact_content(db: db_dependency, artifact_id: int) -> 
 
 @router.patch("/jobs/{job_id}/start", response_model=InternalJobRead)
 async def patch_job_start(db: db_dependency, job_id: int):
+    """Orchestrator marks the job as starting; 409 on an invalid transition."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await start_job_service(db, job)
@@ -158,6 +163,7 @@ async def patch_job_progress(db: db_dependency, job_id: int, body: JobProgressUp
 
 @router.patch("/jobs/{job_id}/succeed", response_model=InternalJobRead)
 async def patch_job_succeed(db: db_dependency, job_id: int):
+    """Orchestrator marks the job as succeeded; 409 on an invalid transition."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await succeed_job_service(db, job)
@@ -167,6 +173,7 @@ async def patch_job_succeed(db: db_dependency, job_id: int):
 
 @router.patch("/jobs/{job_id}/fail", response_model=InternalJobRead)
 async def patch_job_fail(db: db_dependency, job_id: int, body: JobFailUpdate):
+    """Orchestrator marks the job as failed with an error code/message; 409 on an invalid transition."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     try:
         return await fail_job_service(
@@ -201,6 +208,7 @@ async def post_job_artifact(
     preview_supported: bool = Form(False),
     file: UploadFile = File(...),
 ):
+    """Runner uploads an output artifact file for the job (D4)."""
     job = _job_or_404(await get_job_by_id_service(db=db, job_id=job_id))
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is required")

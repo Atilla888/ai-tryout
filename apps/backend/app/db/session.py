@@ -1,3 +1,5 @@
+"""Async SQLAlchemy engine, session factory, and per-request get_db dependency."""
+
 from collections.abc import AsyncGenerator
 from app.core.config import settings
 from app.db.base import Base

@@ -1,3 +1,5 @@
+"""Business logic and DB operations for creating, listing, updating, and deleting spaces."""
+
 from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.spaces import SpaceCreate, SpaceUpdate
@@ -10,6 +12,7 @@ PUBLIC_VISIBILITY = "PUBLIC"
 
 
 async def create_space_service(db: AsyncSession, data: SpaceCreate, owner_id: int):
+    """Persists a new space owned by owner_id and returns it with its generated id."""
     space = Space(
         slug=data.slug,
         name=data.name,
@@ -55,16 +58,19 @@ async def list_public_spaces_service(db: AsyncSession):
 
 
 async def get_space_by_public_id_service(db: AsyncSession, public_id: UUID):
+    """Fetch a space by its public UUID. None if not found."""
     result = await db.execute(select(Space).where(Space.public_id == public_id))
     return result.scalar_one_or_none()
 
 
 async def list_spaces_by_owner_service(db: AsyncSession, owner_id: int) -> list[Space]:
+    """Every space owned by one creator, regardless of status or visibility (for the creator dashboard)."""
     result = await db.execute(select(Space).where(Space.owner_id == owner_id))
     return list(result.scalars().all())
 
 
 async def update_space_service(db: AsyncSession, space: Space, data: SpaceUpdate) -> Space:
+    """Apply only the fields provided in the update payload, persist, and return the refreshed space."""
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(space, field, value)
     await db.commit()

@@ -1,3 +1,5 @@
+"""Pydantic response schema for artifact metadata in the public API."""
+
 from datetime import datetime
 from uuid import UUID
 

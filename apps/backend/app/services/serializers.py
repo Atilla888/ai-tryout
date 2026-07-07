@@ -1,3 +1,5 @@
+"""Helpers that convert ORM jobs and artifacts into public API response schemas."""
+
 from uuid import UUID
 
 from app.db.models import Artifact, Job
@@ -27,6 +29,7 @@ def job_to_read(job: Job) -> JobRead:
 
 
 def job_to_submit_response(job: Job) -> JobSubmitResponse:
+    """Minimal response after a job is submitted: public id, status, and queue position."""
     return JobSubmitResponse(
         id=job.public_id,
         status=JobStatus(job.status),
@@ -35,6 +38,7 @@ def job_to_submit_response(job: Job) -> JobSubmitResponse:
 
 
 def artifact_to_read(artifact: Artifact, *, job_public_id: UUID | None = None) -> ArtifactRead:
+    """Shape an artifact for public API responses; raises ValueError if the job UUID is neither passed nor loadable from artifact.job."""
     resolved_job_public_id = job_public_id
     if resolved_job_public_id is None:
         if artifact.job is not None:

@@ -1,3 +1,5 @@
+"""Pydantic schemas for the internal orchestrator/runner API (job execution and runner I/O)."""
+
 from datetime import datetime
 from typing import Any
 
@@ -7,11 +9,13 @@ from app.schemas.jobs import JobStatus
 
 
 class JobProgressUpdate(BaseModel):
+    """Body a runner posts to report progress on a running job."""
     progress_percent: int = Field(ge=0, le=100)
     message: str | None = None
 
 
 class JobFailUpdate(BaseModel):
+    """Body a runner posts to mark a job as failed."""
     error_code: str
     error_message: str
 
@@ -65,6 +69,7 @@ class JobExecutionData(BaseModel):
 
 
 class InternalArtifactRead(BaseModel):
+    """One output artifact as the orchestrator and runners see it — database ids and storage paths."""
     id: int
     artifact_type: str
     file_name: str

@@ -1,3 +1,5 @@
+"""Business logic and DB operations for the job lifecycle, queue, and output artifacts."""
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import UploadFile, HTTPException

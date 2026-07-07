@@ -45,6 +45,7 @@ async def run_cleanup_once() -> None:
 
 
 async def _cleanup_loop() -> None:
+    """Background task: run cleanup once per CLEANUP_INTERVAL_SECONDS, forever."""
     while True:
         try:
             await run_cleanup_once()
@@ -55,6 +56,7 @@ async def _cleanup_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Start the periodic cleanup task on startup and cancel it on shutdown."""
     logging.basicConfig(level=logging.INFO)
     cleanup_task = asyncio.create_task(_cleanup_loop())
 
@@ -98,10 +100,12 @@ app.include_router(internal.router)
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])
 async def health():
+    """Returns the liveness status of the service."""
     return HealthResponse(status="ok")
 
 
 @app.get("/health-db", tags=["health"])
 async def health_db(db: db_dependency):
+    """Returns ok only if a round-trip query to the database succeeds."""
     await db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "active"}

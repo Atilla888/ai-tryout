@@ -1,3 +1,5 @@
+"""Pydantic response schema for the authenticated user's profile."""
+
 from datetime import datetime
 from uuid import UUID
 

@@ -1,3 +1,5 @@
+"""Pydantic schemas and the job status enum for job submission, status, and history."""
+
 from datetime import datetime
 from uuid import UUID
 
@@ -33,6 +35,7 @@ ACTIVE_JOB_STATUSES = frozenset({
 
 
 class JobSubmitResponse(BaseModel):
+    """Response returned after a job is submitted."""
     id: UUID
     status: JobStatus
     queue_position: int | None = None
@@ -58,4 +61,5 @@ class JobRead(BaseModel):
 
 
 class JobCreate(BaseModel):
+    """Request body for submitting a new job to a space."""
     input_payload: dict = Field(default_factory=dict)

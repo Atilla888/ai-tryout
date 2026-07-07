@@ -28,6 +28,7 @@ ACTIVE_STATUSES = frozenset({"STARTING", "RUNNING"})
 
 
 def _env_int(name: str, default: int) -> int:
+    """Reads an integer environment variable, falling back to a default when unset."""
     raw = os.environ.get(name, "").strip()
     if not raw:
         return default
@@ -35,6 +36,7 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _env_str(name: str, default: str | None = None) -> str:
+    """Reads a string environment variable, falling back to a default or exiting if it is required and unset."""
     value = os.environ.get(name, "").strip()
     if value:
         return value
@@ -46,12 +48,14 @@ def _env_str(name: str, default: str | None = None) -> str:
 
 @dataclass
 class RunnerHandle:
+    """Pairs a job id with the opaque backend handle for its running worker."""
     job_id: str
     handle: Any
 
 
 @dataclass
 class Orchestrator:
+    """Polls the backend for jobs, dispatches runners via a backend, and drives their lifecycle and cancellation."""
     api_base_url: str
     service_token: str
     concurrency_limit: int
@@ -68,19 +72,23 @@ class Orchestrator:
         )
 
     def close(self) -> None:
+        """Closes the underlying HTTP client."""
         self.client.close()
 
     def _log(self, message: str, *args: object) -> None:
+        """Logs a message at INFO level with lazy %-formatting arguments."""
         logging.info(message, *args)
 
     # --- backend API helpers -------------------------------------------------
 
     def _fetch_jobs(self, status: str) -> list[dict]:
+        """Fetches the list of jobs currently in the given status from the internal API."""
         response = self.client.get("/internal/jobs", params={"status": status})
         response.raise_for_status()
         return response.json()
 
     def _fetch_execution_data(self, job_id: str) -> dict | None:
+        """Fetches a job's execution data, returning None if the job is not found (404)."""
         response = self.client.get(f"/internal/jobs/{job_id}/execution-data")
         if response.status_code == 404:
             return None
@@ -88,6 +96,7 @@ class Orchestrator:
         return response.json()
 
     def _start_job(self, job_id: str) -> bool:
+        """Transitions the job to STARTING, returning False if the backend rejects the claim (409)."""
         response = self.client.patch(f"/internal/jobs/{job_id}/start")
         if response.status_code == 409:
             self._log("job=%s start rejected: %s", job_id, response.text)
@@ -97,6 +106,7 @@ class Orchestrator:
         return True
 
     def _get_job_status(self, job_id: str) -> str | None:
+        """Returns the job's current status, or None if the job no longer exists (404)."""
         response = self.client.get(f"/internal/jobs/{job_id}")
         if response.status_code == 404:
             return None
@@ -104,6 +114,7 @@ class Orchestrator:
         return response.json().get("status")
 
     def _fail_job_if_active(self, job_id: str, *, error_code: str, error_message: str) -> None:
+        """Marks the job FAILED via the internal API, but only if it is still in an active (STARTING/RUNNING) state."""
         status = self._get_job_status(job_id)
         if status not in ACTIVE_STATUSES:
             self._log("job=%s skip fail (status=%s)", job_id, status)
@@ -119,6 +130,7 @@ class Orchestrator:
         self._log("job=%s marked FAILED (%s)", job_id, error_code)
 
     def _finalize_cancel(self, job_id: str) -> None:
+        """Finalizes a CANCELLING job to CANCELLED, skipping quietly if it is already gone or in a conflicting state (404/409)."""
         response = self.client.patch(f"/internal/jobs/{job_id}/cancelled")
         if response.status_code in (404, 409):
             self._log("job=%s finalize cancel skipped: %s", job_id, response.text)
@@ -129,6 +141,7 @@ class Orchestrator:
     # --- lifecycle steps -----------------------------------------------------
 
     def _spawn_runner(self, job_id: str, execution_data: dict) -> Any | None:
+        """Starts a runner via the backend, returning its handle, or fails the job and returns None on any spawn error."""
         try:
             return self.backend.start(job_id, execution_data)
         except Exception as exc:  # noqa: BLE001 - report any spawn failure as a job failure
@@ -141,6 +154,7 @@ class Orchestrator:
             return None
 
     def _reap_finished(self) -> None:
+        """Polls each active runner, failing jobs whose worker exited non-zero without reporting, then drops finished ones from the active set."""
         finished: list[str] = []
         for job_id, runner in self.active.items():
             exit_code = self.backend.poll(runner.handle)
@@ -181,6 +195,7 @@ class Orchestrator:
             self._finalize_cancel(job_id)
 
     def _dispatch(self) -> None:
+        """Claims and starts at most one QUEUED job per tick, respecting the concurrency limit and skipping jobs without execution data."""
         if len(self.active) >= self.concurrency_limit:
             return
 
@@ -210,6 +225,7 @@ class Orchestrator:
         self.active[job_id] = RunnerHandle(job_id=job_id, handle=handle)
 
     def run_forever(self) -> None:
+        """Runs the main loop: reap finished runners, handle cancellations, dispatch new jobs, and sleep, terminating all workers on interrupt."""
         self._log(
             "orchestrator started api=%s backend=%s concurrency=%s poll=%ss",
             self.api_base_url,
@@ -233,6 +249,7 @@ class Orchestrator:
 
 
 def main() -> None:
+    """Configures logging, builds the runner backend from the environment, and runs the orchestrator until shutdown."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",

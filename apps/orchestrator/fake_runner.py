@@ -28,6 +28,7 @@ PROGRESS_STEPS = (20, 40, 60, 80)
 
 
 def _env(*names: str, default: str | None = None) -> str:
+    """Returns the first non-empty environment variable among names, else the default (or exits if none)."""
     for name in names:
         value = os.environ.get(name, "").strip()
         if value:
@@ -39,6 +40,7 @@ def _env(*names: str, default: str | None = None) -> str:
 
 
 def _is_cancelling(client: httpx.Client, job_id: str) -> bool:
+    """Returns True if the job is CANCELLING/CANCELLED (or already gone), signalling the runner to stop."""
     response = client.get(f"/internal/jobs/{job_id}")
     if response.status_code == 404:
         return True
@@ -47,6 +49,7 @@ def _is_cancelling(client: httpx.Client, job_id: str) -> bool:
 
 
 def main() -> int:
+    """Runs the full runner contract for one job (fetch input, consume files, report progress, upload result, succeed); reports failure on error."""
     job_id = _env("JOB_ID")
     api_base_url = _env("BACKEND_API_URL", "API_BASE_URL", default="http://localhost:8000")
     token = _env("RUNNER_TOKEN", "INTERNAL_SERVICE_TOKEN")

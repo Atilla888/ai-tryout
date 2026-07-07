@@ -1,3 +1,5 @@
+"""HTTP endpoints for previewing and downloading job artifacts."""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -19,6 +21,7 @@ db_dependency = Annotated[AsyncSession, Depends(get_db)]
 
 @router.get("/{artifact_id}/preview")
 async def preview_artifact(db: db_dependency, artifact_id: UUID) -> FileResponse:
+    """Serves an artifact inline for in-browser preview by its public id."""
     artifact = await get_artifact_by_public_id_service(db, artifact_id)
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
@@ -38,6 +41,7 @@ async def preview_artifact(db: db_dependency, artifact_id: UUID) -> FileResponse
 
 @router.get("/{artifact_id}/download")
 async def download_artifact(db: db_dependency, artifact_id: UUID) -> FileResponse:
+    """Serves an artifact as a file download (attachment) by its public id."""
     artifact = await get_artifact_by_public_id_service(db, artifact_id)
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")

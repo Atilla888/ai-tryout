@@ -1,3 +1,5 @@
+"""Application settings loaded from the environment and repo-root .env file."""
+
 from pathlib import Path
 
 from pydantic import AliasChoices, Field
@@ -8,6 +10,7 @@ _CONFIG_FILE = Path(__file__).resolve()
 
 
 def _find_repo_root(start: Path) -> Path:
+    """Walk upward until a docker-compose.yml or .env marks the repo root, else return start."""
     for candidate in (start, *start.parents):
         if (candidate / "docker-compose.yml").is_file() or (candidate / ".env").is_file():
             return candidate
