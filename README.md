@@ -63,7 +63,7 @@ scripts/
 ## Running the tests
 
 ```bash
-# Backend (228 tests, 80% branch coverage)
+# Backend (237 tests, 80% branch coverage)
 cd apps/backend
 python -m pytest tests/ --cov=app --cov-branch -q
 

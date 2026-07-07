@@ -10,7 +10,7 @@ Schema: Slide set 08 (What is tested / Prerequisites / Steps / Expected result /
 
 | Test category | Tool | Number of tests | Result |
 |---|---|---|---|
-| Backend unit tests | pytest 8.x | 228 passed, 7 skipped | 80% branch coverage |
+| Backend unit tests | pytest 8.x | 237 passed, 7 skipped | 80% branch coverage |
 | Frontend unit/UI tests | Vitest + @testing-library/react | 24 passed | all green |
 | Load test | scripts/loadtest.py (httpx ASGI) | 2 x 2,000 requests | 0 errors |
 | Manual tests | Manual walkthrough | 15 test cases (TF-01 to TF-15) | all ok |
@@ -31,7 +31,7 @@ python -m pytest tests/ --cov=app --cov-branch -q
 
 Result:
 ```
-228 passed, 7 skipped  (4.02 s)
+237 passed, 7 skipped  (4.42 s)
 Branch coverage total: 80%  (statements missed 204/1193, branches missed 20/182)
 ```
 
@@ -144,6 +144,7 @@ Branch coverage total: 80%  (statements missed 204/1193, branches missed 20/182)
 | tests/test_auth.py | 12 | DevAuthProvider, OIDC token parsing, role extraction |
 | tests/test_fake_runner.py | 2 | Fake runner SDK roundtrip (DEV_MODE) |
 | tests/test_maintenance.py | 4 | Cleanup job: closing stale jobs |
+| tests/test_user_identity.py | 9 | Per-user running number, creator ID on spaces, public_id assignment |
 | tests/integration/test_job_flow.py | 16 | End-to-end: create job -> runner -> artifact -> succeed |
 
 ---
@@ -492,8 +493,8 @@ Backend branch coverage: 80%
   Branches    : 182 total,   20 partially covered
 
 Test run:
-  228 passed, 7 skipped
-  Runtime: 4.02 s
+  237 passed, 7 skipped
+  Runtime: 4.42 s
 ```
 
 ```
