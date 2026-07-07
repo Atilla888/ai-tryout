@@ -36,13 +36,15 @@ curl http://localhost:8000/health
 
 3. Open the app at http://localhost:5173 and log in
 
-The backend runs with `AUTH_PROVIDER=oidc`, and the realm import already ships ready-to-use accounts, so no user setup is needed:
+Click the "Sign in" button in the top-right corner of the navigation bar. You will be redirected to Keycloak. The realm import already ships ready-to-use accounts, so no user setup is needed:
 
 | Username | Password | Role |
 |---|---|---|
 | `admin` | `admin123` | admin and space_creator |
 | `creator` | `creator123` | can create Spaces |
 | `user` | `user123` | a normal end user |
+
+After logging in you will be redirected back to the app. Your username appears in the top-right corner when the session is active. Submitting jobs requires being logged in — without a session the backend returns 401.
 
 You can also register a brand new account from the login page.
 
@@ -54,7 +56,7 @@ A fresh database has no Spaces yet. Either create one from the Creator dashboard
 bash scripts/mac-linux/seed.sh        # Windows: ./scripts/windows/seed.ps1
 ```
 
-Note: in Docker Compose the orchestrator uses the bundled fake runner, so a submitted job returns dummy output. The real CPU mock runners (a demo cube and a sine-wave WAV) run under kind in Option B.
+Important: in Docker Compose the orchestrator uses the bundled fake runner. Submitted jobs complete successfully but return placeholder text output instead of a real file. To get actual results (a blue cube GLB from SAM 3D, or a sine-wave WAV from ACE-Step), use Option B (kind) instead.
 
 Prefer no login at all? Set `AUTH_PROVIDER=dev` in `.env`, then run `docker compose up -d` again. Every request is then treated as admin without needing Keycloak.
 
