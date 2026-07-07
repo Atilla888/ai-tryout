@@ -100,7 +100,7 @@ def main() -> int:
         }
         client.post(
             f"/internal/jobs/{job_id}/artifacts",
-            data={"artifact_type": "text", "preview_supported": "true"},
+            data={"artifact_type": "output_text", "preview_supported": "true"},
             files={"file": ("result.json", json.dumps(summary, indent=2).encode(), "application/json")},
         ).raise_for_status()
 
