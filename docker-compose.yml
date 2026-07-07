@@ -67,6 +67,20 @@ services:
       - ./apps/backend:/app
       - storage_data:/app/storage
 
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: ai-spaces-frontend:dev
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+
   orchestrator:
     build:
       context: ./apps/orchestrator
