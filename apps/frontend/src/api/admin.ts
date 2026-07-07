@@ -3,6 +3,7 @@ import type { CreatorSpace } from './creator'
 
 export interface AdminUser {
   id: string
+  user_number: number
   email: string
   display_name: string | null
   role: string

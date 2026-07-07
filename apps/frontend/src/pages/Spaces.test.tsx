@@ -37,6 +37,7 @@ const space: SpaceDetail = {
   status: 'published',
   visibility: 'public',
   owner_id: null,
+  owner_number: null,
   container_image: null,
   resource_requirements: {},
   ui_config: {

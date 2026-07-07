@@ -15,6 +15,7 @@ export interface Job {
   space_id: string
   space_name: string | null
   user_id: string
+  user_number: number
   status: JobStatus
   queue_position: number | null
   progress_percent: number
@@ -49,6 +50,7 @@ export interface Artifact {
 
 export interface Me {
   id: string
+  user_number: number
   subject_id: string
   idp: string
   email: string

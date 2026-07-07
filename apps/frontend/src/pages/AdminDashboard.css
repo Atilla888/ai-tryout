@@ -139,6 +139,18 @@
   color: #1a1a1a;
 }
 
+/* Short running-number chip for user / creator ids */
+.adm-id-chip {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  background: #f1f3f5;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
 .adm-empty-cell {
   text-align: center;
   color: #9ca3af;

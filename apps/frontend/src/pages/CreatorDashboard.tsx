@@ -56,6 +56,7 @@ function CreatorDashboard() {
               <div className="creator-space-info">
                 <span className="creator-space-name">{space.name}</span>
                 <span className="creator-space-slug">/{space.slug}</span>
+                <span className="creator-space-owner">Creator: User #{space.owner_number}</span>
                 {space.description && (
                   <p className="creator-space-desc">{space.description}</p>
                 )}
