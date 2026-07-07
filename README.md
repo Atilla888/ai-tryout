@@ -18,24 +18,21 @@ Users can browse Spaces and submit jobs. Each job runs in its own Kubernetes pod
 | Orchestration | Python orchestrator + Kubernetes Jobs |
 | Infrastructure | Kubernetes (kind locally), Docker Compose |
 
-## Running locally
+## Getting started
 
-There are two options:
+Two ways to run it locally, both covered step by step in [QUICKSTART.md](QUICKSTART.md):
 
-Docker Compose (easiest, about 5 minutes):
+1. **Docker Compose** (fastest, everything in containers).
+2. **Kubernetes with kind** (the full stack with Keycloak login and both Spaces).
+
+The quickest start is Docker Compose:
+
 ```bash
 cp .env.example .env
 docker compose up
 ```
 
-Kubernetes with kind (full stack):
-```bash
-# Mac/Linux
-bash scripts/mac-linux/up.sh && bash scripts/mac-linux/seed.sh
-# Windows: ./scripts/windows/up.ps1 then ./scripts/windows/seed.ps1
-```
-
-See Option B in [QUICKSTART.md](QUICKSTART.md) for details.
+Then open http://localhost:5173 and log in with username `admin` and password `admin123`. For the kind option, prerequisites, and the full walkthrough, see [QUICKSTART.md](QUICKSTART.md).
 
 ## Project structure
 
@@ -76,3 +73,9 @@ npm run test
 ```
 
 Full test results: [docs/test-results.md](docs/test-results.md)
+
+## Documentation
+
+- [QUICKSTART.md](QUICKSTART.md): how to run the project, both Docker Compose and kind.
+- [docs/implementation-guide.md](docs/implementation-guide.md): technologies used, architecture, and how the services connect.
+- [docs/test-results.md](docs/test-results.md): the test report (unit, load, and manual).
