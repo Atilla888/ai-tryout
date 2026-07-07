@@ -1,12 +1,10 @@
 # Project Contributions
 
-This document lists the GitLab issues and additional contributions for each team member in the AI-Spaces project (SS 2026, Hof University of Applied Sciences).
+This document lists the contributions of each team member in the AI-Spaces project (SS 2026, Hof University of Applied Sciences).
 
 ---
 
 ## Sarah da Anunciacao Santos (ssantos)
-
-### GitLab Tickets
 
 | # | Title |
 |---|-------|
@@ -20,39 +18,29 @@ This document lists the GitLab issues and additional contributions for each team
 | 42 | E3 — Frontend test suite |
 | 43 | G1 — Complete docker-compose for full local stack |
 | 44 | G2 — GitLab CI pipeline |
-
-### Additional Contributions (outside ticket system)
-
-- Integrated the ACE-Step 1.5 runner (text-to-music) as a working Space, including a mock mode that outputs a sine-wave WAV file without requiring a GPU
-- Integrated the SAM 3D Objects runner (image-to-3D) as a working Space, including a mock mode that outputs a blue cube GLB without requiring a GPU
-- Built the interactive 3D viewer in the frontend using @google/model-viewer (WebGL-based, supports rotate and zoom)
-- Wrote and structured the complete test results documentation (docs/test-results.md), covering 228 backend tests, 24 frontend tests, 2 load tests, 15 manual tests, and 1 integration test
-- Wrote the project documentation: README.md, QUICKSTART.md, docs/implementation-guide.md
+| — | ACE-Step 1.5 runner integration (text-to-music, mock mode: sine-wave WAV) |
+| — | SAM 3D Objects runner integration (image-to-3D, mock mode: blue cube GLB) |
+| — | Interactive 3D viewer in the frontend using @google/model-viewer |
+| — | Test results documentation (228 backend, 24 frontend, 2 load, 15 manual, 1 integration test) |
+| — | Project documentation: README.md, QUICKSTART.md, docs/implementation-guide.md |
 
 ---
 
 ## Atilla Kenebay (atilla888)
 
-### GitLab Tickets
-
 | # | Title |
 |---|-------|
 | 10 | Job Progress Page — Polling and Status Display |
 | 17 | Orchestrator Stub — Picks Queued Jobs and Spawns Fake Runner |
-
-### Additional Contributions (outside ticket system)
-
-- Designed and set up Kubernetes manifests for all services (Postgres, Keycloak, backend, orchestrator, frontend)
-- Created automated cluster setup scripts for Mac/Linux (scripts/mac-linux/up.sh, seed.sh, down.sh) and Windows (scripts/windows/up.ps1, seed.ps1, down.ps1)
-- Configured Docker Compose with automatic migration execution, health-gated service startup, and NFS-based artifact storage
-- Added Keycloak realm configuration with pre-seeded user accounts (admin, creator, end user)
-- Added module and function docstrings across the backend and orchestrator codebase
+| — | Kubernetes manifests for all services (Postgres, Keycloak, backend, orchestrator, frontend) |
+| — | Cluster setup scripts for Mac/Linux (up.sh, seed.sh, down.sh) and Windows (up.ps1, seed.ps1, down.ps1) |
+| — | Docker Compose with automatic migrations, health-gated startup, and NFS-based artifact storage |
+| — | Keycloak realm configuration with pre-seeded user accounts (admin, creator, end user) |
+| — | Module and function docstrings across backend and orchestrator |
 
 ---
 
 ## Jann Hopster (jhopster)
-
-### GitLab Tickets
 
 | # | Title |
 |---|-------|
@@ -78,16 +66,13 @@ This document lists the GitLab issues and additional contributions for each team
 | 41 | F2 — Kubernetes orchestrator backend |
 | 45 | G3 — Kubernetes manifests and secrets |
 | 46 | G4 — Production deployment docs and build pipeline |
-
-### Additional Contributions (outside ticket system)
-
-- Modularized the frontend API layer (split api.ts into domain-specific modules with a shared fetch wrapper)
-- Decomposed Spaces.tsx into reusable sub-components
-- Added CORS middleware and OpenAPI endpoint descriptions to the backend
-- Added backend test coverage tooling and a load test script
-- Integrated the ACE-Step 1.5 Space on the frontend side
-- Fixed several bugs: admin page crash on integer owner_id, blank select options, navigation header class mismatch
-- Implemented artifact file cleanup when a history entry is deleted
+| — | Frontend API layer modularization (split api.ts into domain-specific modules) |
+| — | Spaces.tsx decomposed into reusable sub-components |
+| — | CORS middleware and OpenAPI endpoint descriptions |
+| — | Backend test coverage tooling and load test script |
+| — | ACE-Step 1.5 Space frontend integration |
+| — | Bug fixes: admin page crash on integer owner_id, blank select options, nav header class mismatch |
+| — | Artifact file cleanup on history delete |
 
 ---
 
